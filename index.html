@@ -318,7 +318,7 @@ svg#map{width:100%;height:100%;}
     <div class="api-key-section">
       <div class="api-key-label">Gemini API key</div>
       <input class="api-key-input" id="s-apikey" type="password" placeholder="Paste your Gemini API key here…"/>
-      <div class="api-key-hint">Get a free API key at <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>. Your key is stored privately in your account and never shared.</div>
+      <div class="api-key-hint">Get a free API key at <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>. Your key is stored only in this browser and never sent to our servers.</div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="closeSettings()">Cancel</button><button class="btn btn-primary" onclick="saveSettings()">Save context</button></div>
   </div>
@@ -371,7 +371,16 @@ var ns='http://www.w3.org/2000/svg';
 
 var DT={ta:{label:"Talent acquisition",color:"#5a4fcf",colorLight:"rgba(90,79,207,0.12)",badge:"Centre of the map",badgeBg:"rgba(90,79,207,0.1)",badgeColor:"#5a4fcf",what:"TA sits at the intersection of every team in the business. It doesn't just fill roles — it translates business strategy into people, unblocks growth, and surfaces organisational health signals no one else can see.",value:["Turn headcount plans into hiring roadmaps before pipelines are needed","Report on hiring as a business metric, not an HR one","Use data from every function to advise leadership on growth risk"],connects:["All teams","Exec (mandate)","Finance (headcount)","People ops (handoff)"],bottleneck:null,questions:["How does TA currently report to leadership?","Which team relationships feel most transactional?","Where does TA have the most strategic influence today?"],hiringVolume:5,isCentre:true,head:'',headTitle:'',subteams:[]},exec:{label:"Exec / leadership",color:"#c47d1a",colorLight:"rgba(196,125,26,0.1)",badge:"Strategy setter",badgeBg:"rgba(196,125,26,0.1)",badgeColor:"#c47d1a",what:"Sets company direction, approves headcount, and defines the teams TA hires into. Every role ultimately traces back to a strategic decision made at this level.",value:["Bring TA into planning cycles early","Present hiring velocity as a business risk metric","Flag when role briefs are misaligned with market"],connects:["TA (hiring mandate)","Finance (headcount budget)","All HMs (org design)"],bottleneck:null,questions:["Does TA have a seat in quarterly planning?","How far in advance does exec share growth plans?","Is TA asked to validate headcount feasibility?"],hiringVolume:2,head:'',headTitle:'',subteams:[]},engineering:{label:"Engineering / product",color:"#2d7dd2",colorLight:"rgba(45,125,210,0.1)",badge:"Highest hiring volume",badgeBg:"rgba(45,125,210,0.1)",badgeColor:"#2d7dd2",what:"The team TA hires most into at most tech scaleups. Hiring engineers and PMs directly determines product velocity. Every open role has a measurable cost to roadmap delivery.",value:["Turn vague job briefs into structured scorecards","Track interview-to-offer conversion rates","Advise on whether role specs match market availability"],connects:["TA (constant pipeline)","Exec (roadmap)","Sales (product enables revenue)"],bottleneck:null,questions:["How structured are engineering interview panels?","What's the average time from screen to offer?","Do hiring managers give structured feedback after every interview?"],hiringVolume:5,head:'',headTitle:'',subteams:[]},sales:{label:"Sales / GTM",color:"#1e9e72",colorLight:"rgba(30,158,114,0.1)",badge:"Revenue unlocker",badgeBg:"rgba(30,158,114,0.1)",badgeColor:"#1e9e72",what:"A single unfilled AE or SDR role has a direct, measurable revenue impact. Time-to-fill in GTM translates directly to pipeline at risk.",value:["Quantify pipeline risk from open GTM roles in £/$ terms","Track time-to-productivity for new hires","Align with sales leadership on ramp expectations"],connects:["TA (quota-carrying hires)","Finance (revenue forecast)","Exec (growth targets)"],bottleneck:null,questions:["Does TA know the £ value of each unfilled GTM role?","How aligned are TA and sales on what 'great' looks like?","Are ramp timelines factored into hiring urgency?"],hiringVolume:4,head:'',headTitle:'',subteams:[]},finance:{label:"Finance",color:"#c0392b",colorLight:"rgba(192,57,43,0.08)",badge:"Headcount gatekeeper",badgeBg:"rgba(192,57,43,0.08)",badgeColor:"#c0392b",what:"Approves headcount, sets comp bands, and controls budget releases. Finance is often TA's most important — and most neglected — relationship.",value:["Build a shared headcount tracker","Translate delayed approvals into revenue impact","Advocate for comp band reviews when roles go cold"],connects:["Exec (budget)","TA (headcount release)","People ops (comp bands)"],bottleneck:null,questions:["How does TA get notified when headcount is approved?","Is there a live headcount tracker shared with Finance?","When were comp bands last reviewed against market rates?"],hiringVolume:2,head:'',headTitle:'',subteams:[]},hr:{label:"People ops / HR",color:"#c47d1a",colorLight:"rgba(196,125,26,0.1)",badge:"TA's closest partner",badgeBg:"rgba(196,125,26,0.1)",badgeColor:"#c47d1a",what:"Owns the employee lifecycle from offer acceptance onwards. The handoff point from TA — what happens after hire directly reflects on TA's reputation.",value:["Align on what 'great candidate' means for retention","Share feedback data to improve onboarding","Collaborate on EVP messaging and offer construction"],connects:["TA (candidate handoff)","Finance (comp)","Exec (people strategy)"],bottleneck:null,questions:["How does TA hand off candidates to HR post-offer?","Is retention data shared back to inform hiring?","Do TA and HR co-own the EVP?"],hiringVolume:3,head:'',headTitle:'',subteams:[]},marketing:{label:"Marketing",color:"#8e4fcf",colorLight:"rgba(142,79,207,0.1)",badge:"Employer brand ally",badgeBg:"rgba(142,79,207,0.1)",badgeColor:"#8e4fcf",what:"Owns external brand and channels. Can be a powerful TA ally for employer brand — but is almost always siloed from recruiting in practice.",value:["Co-own the employer brand strategy","Treat job ads as content, not listings","Leverage product launches to attract passive candidates"],connects:["TA (employer brand)","Exec (brand direction)","Sales (GTM messaging)"],bottleneck:null,questions:["Does TA have input into how the company presents as an employer?","When did TA and marketing last collaborate?","Is there a shared content calendar for employer brand?"],hiringVolume:3,head:'',headTitle:'',subteams:[]},cs:{label:"Customer success",color:"#1e9e72",colorLight:"rgba(30,158,114,0.1)",badge:"Retention-linked hiring",badgeBg:"rgba(30,158,114,0.1)",badgeColor:"#1e9e72",what:"Owns post-sale relationships and renewal revenue. CS hiring directly affects churn risk and NPS — often undervalued relative to commercial impact.",value:["Frame CS hiring in terms of NRR and churn risk","Define what great CS talent looks like with CS leaders","Build a pipeline before headcount is approved"],connects:["TA (specialist pipeline)","Sales (handoff)","Finance (NRR)"],bottleneck:null,questions:["Does TA understand the commercial impact of CS vacancies?","How quickly do CS roles currently fill?","Are CS roles consistently scoped correctly?"],hiringVolume:3,head:'',headTitle:'',subteams:[]},data:{label:"Data / analytics",color:"#2d7d9a",colorLight:"rgba(45,125,154,0.1)",badge:"Specialist talent",badgeBg:"rgba(45,125,154,0.1)",badgeColor:"#2d7d9a",what:"Increasingly critical at Series C+ — data roles are in short supply and frequently mis-benchmarked. Require TA to understand technical depth.",value:["Build specialist sourcing channels for data talent","Develop assessments that don't waste candidate time","Advise on market rates — data roles are frequently mis-benchmarked"],connects:["TA (specialist sourcing)","Engineering (tooling)","Finance (forecasting)"],bottleneck:null,questions:["Does TA have a dedicated approach for data vs. general tech?","Are data hiring managers involved in defining sourcing criteria?","How does TA benchmark data salaries?"],hiringVolume:3,head:'',headTitle:'',subteams:[]},ops:{label:"Operations",color:"#6b6b60",colorLight:"rgba(107,107,96,0.1)",badge:"Enablement",badgeBg:"rgba(107,107,96,0.1)",badgeColor:"#6b6b60",what:"Manages systems, processes, and infrastructure. Often overlooked by TA until there's a systems crisis.",value:["Map the pre-boarding checklist for delays","Flag contract bottlenecks before they push start dates","Involve Ops in ATS decisions early"],connects:["TA (systems & compliance)","Finance (process)","People ops (onboarding)"],bottleneck:null,questions:["Who owns the ATS relationship — TA or Ops?","How many days from offer acceptance to Day 1 readiness?","Are there recurring compliance delays in the offer process?"],hiringVolume:2,head:'',headTitle:'',subteams:[]}};
 
-function gp(i){return i<POS.length?POS[i]:EPOS[(i-POS.length)%EPOS.length];}
+function gp(i){
+  if(i<POS.length)return POS[i];
+  var ei=i-POS.length;
+  // Auto-extend EPOS if we've run out of slots (prevents nodes stacking)
+  while(EPOS.length<=ei){
+    var angle=(EPOS.length/(EPOS.length+1))*2*Math.PI;
+    EPOS.push({x:Math.round(350+220*Math.cos(angle)),y:Math.round(260+180*Math.sin(angle))});
+  }
+  return EPOS[ei];
+}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 // ── SUPABASE AUTH ─────────────────────────────────────────────────────────────
@@ -391,7 +400,11 @@ function signOut(){
   fetch(SUPABASE_URL+'/auth/v1/logout',{method:'POST',headers:supabaseHeaders(token)})
     .finally(function(){
       clearToken();
+      // Clear API key so it doesn't persist for a different user on the same browser
+      localStorage.removeItem('ta-sor-apikey');
+      localStorage.removeItem('ta-sor-refresh');
       currentUser=null;
+      userApiKey='';
       document.getElementById('app').classList.remove('visible');
       document.getElementById('auth-screen').style.display='flex';
     });
@@ -414,12 +427,36 @@ function handleAuthCallback(){
   return true;
 }
 
+function refreshToken(){
+  var rt=localStorage.getItem('ta-sor-refresh');
+  if(!rt)return Promise.resolve(null);
+  return fetch(SUPABASE_URL+'/auth/v1/token?grant_type=refresh_token',{
+    method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY},
+    body:JSON.stringify({refresh_token:rt})
+  }).then(function(r){return r.json();})
+  .then(function(d){
+    if(d.access_token){setToken(d.access_token);if(d.refresh_token)localStorage.setItem('ta-sor-refresh',d.refresh_token);return d.access_token;}
+    return null;
+  }).catch(function(){return null;});
+}
+
 function getUser(){
   var token=getToken();
   if(!token)return Promise.resolve(null);
   return fetch(SUPABASE_URL+'/auth/v1/user',{headers:supabaseHeaders(token)})
-    .then(function(r){return r.json();})
-    .then(function(d){return d.id?d:null;})
+    .then(function(r){
+      if(r.status===401){
+        // Token expired — try to refresh
+        return refreshToken().then(function(newToken){
+          if(!newToken)return null;
+          return fetch(SUPABASE_URL+'/auth/v1/user',{headers:supabaseHeaders(newToken)})
+            .then(function(r2){return r2.json();})
+            .then(function(d){return d.id?d:null;});
+        });
+      }
+      return r.json();
+    })
+    .then(function(d){return d&&d.id?d:null;})
     .catch(function(){return null;});
 }
 
@@ -437,10 +474,22 @@ function loadFromSupabase(){
       if(d.AID)AID=d.AID;
       if(d.AIS){Object.keys(d.AIS).forEach(function(id){AIS[id]=d.AIS[id]==='loading'?'idle':d.AIS[id];});}
       if(d.ctx)companyCtx=d.ctx;
-      if(d.apiKey)userApiKey=d.apiKey;
+      // API key is stored in localStorage only — never in Supabase
+      userApiKey=localStorage.getItem('ta-sor-apikey')||'';
       if(d.custom){Object.keys(d.custom).forEach(function(id){teams[id]=d.custom[id];if(!teams[id].subteams)teams[id].subteams=[];});}
-      if(d.tOrder){tOrder=d.tOrder.filter(function(id){return!!teams[id];});Object.keys(teams).forEach(function(id){if(tOrder.indexOf(id)<0)tOrder.push(id);});}
+      if(d.tOrder){
+        tOrder=d.tOrder.filter(function(id){return!!teams[id];});
+        // Add any new default depts that didn't exist when user last saved
+        Object.keys(DT).forEach(function(id){
+          // Only add if not explicitly removed and not already present
+          if(tOrder.indexOf(id)<0&&(!d.removedDefaults||d.removedDefaults.indexOf(id)<0)){tOrder.push(id);}
+        });
+      }
+      // Apply removed defaults — don't restore depts the user deleted
+      if(d.removedDefaults){d.removedDefaults.forEach(function(id){var i=tOrder.indexOf(id);if(i>-1)tOrder.splice(i,1);delete teams[id];delete RAG[id];delete NOTES[id];delete AID[id];delete AIS[id];});}
+      // Restore saved node positions for both default and extra slots
       if(d.POS&&d.POS.length){for(var i=0;i<d.POS.length&&i<POS.length;i++)POS[i]=d.POS[i];}
+      if(d.EPOS&&d.EPOS.length){for(var i=0;i<d.EPOS.length&&i<EPOS.length;i++)EPOS[i]=d.EPOS[i];}
     }).catch(function(e){console.warn('Load failed:',e);});
 }
 
@@ -450,18 +499,31 @@ function saveToSupabase(){
   clearTimeout(saveTimer);
   saveTimer=setTimeout(function(){
     var custom={};
-    tOrder.forEach(function(id){
-      if(!DT[id])custom[id]=teams[id];
-      else if(teams[id].head||teams[id].headTitle||teams[id].what!==DT[id].what||(teams[id].subteams&&teams[id].subteams.length))custom[id]=teams[id];
-    });
-    var payload={RAG:RAG,NOTES:NOTES,AID:AID,AIS:AIS,ctx:companyCtx,apiKey:userApiKey,custom:custom,tOrder:tOrder,POS:POS.slice()};
+    // Save ALL active teams so removals and edits both persist correctly
+    tOrder.forEach(function(id){custom[id]=teams[id];});
+    // Track which default depts have been removed so they don't reappear on reload
+    var removedDefaults=Object.keys(DT).filter(function(id){return tOrder.indexOf(id)<0;});
+    // Save full position arrays — both default and extra positions for custom depts
+    var payload={RAG:RAG,NOTES:NOTES,AID:AID,AIS:AIS,ctx:companyCtx,custom:custom,tOrder:tOrder,removedDefaults:removedDefaults,POS:POS.slice(),EPOS:EPOS.slice()};
+    // Attempt token refresh if needed before saving
+    var token2=getToken();
     fetch(SUPABASE_URL+'/rest/v1/user_data',{
       method:'POST',
-      headers:Object.assign({},supabaseHeaders(token),{'Prefer':'resolution=merge-duplicates'}),
+      headers:Object.assign({},supabaseHeaders(token2),{'Prefer':'resolution=merge-duplicates'}),
       body:JSON.stringify({user_id:currentUser.id,payload:payload,updated_at:new Date().toISOString()})
     }).then(function(r){
-      if(r.ok)showSaved();
-      else showSaveFailed();
+      if(r.status===401){
+        // Token may have expired mid-session — refresh and retry once
+        return refreshToken().then(function(newToken){
+          if(!newToken){showSaveFailed();return;}
+          return fetch(SUPABASE_URL+'/rest/v1/user_data',{
+            method:'POST',
+            headers:Object.assign({},supabaseHeaders(newToken),{'Prefer':'resolution=merge-duplicates'}),
+            body:JSON.stringify({user_id:currentUser.id,payload:payload,updated_at:new Date().toISOString()})
+          }).then(function(r2){if(r2.ok)showSaved();else showSaveFailed();});
+        });
+      }
+      if(r.ok)showSaved();else showSaveFailed();
     }).catch(function(){showSaveFailed();});
   },600);
 }
@@ -480,7 +542,7 @@ function showSaveFailed(){
 // ── GEMINI AI ─────────────────────────────────────────────────────────────────
 function callGemini(prompt){
   if(!userApiKey)return Promise.reject(new Error('No API key set. Add your Gemini API key in Company settings.'));
-  return fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key='+userApiKey,{
+  return fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key='+userApiKey,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:1000}})
@@ -560,6 +622,8 @@ function closeSettings(){document.getElementById('settings-overlay').classList.a
 function saveSettings(){
   companyCtx={name:document.getElementById('s-name').value.trim(),industry:document.getElementById('s-industry').value.trim(),stage:document.getElementById('s-stage').value,headcount:document.getElementById('s-headcount').value,taSize:document.getElementById('s-ta-size').value,hiringVol:document.getElementById('s-hiring-vol').value,regions:document.getElementById('s-regions').value.trim(),focus:document.getElementById('s-focus').value.trim(),challenge:document.getElementById('s-challenge').value.trim()};
   userApiKey=document.getElementById('s-apikey').value.trim();
+  // Store API key in localStorage only — never sent to Supabase
+  localStorage.setItem('ta-sor-apikey',userApiKey);
   renderCtxStatus();saveToSupabase();closeSettings();
   if(activeNode)renderDetail(activeNode);
 }
@@ -731,14 +795,19 @@ function setRag(id,val){
 }
 
 // ── AI INSIGHTS ───────────────────────────────────────────────────────────────
+var aiGenerating={};
+
 function genInsights(id){
   var t=teams[id],rg=RAG[id],note=NOTES[id]||'';if(!rg||!userApiKey)return;
+  // Prevent duplicate concurrent calls for the same node
+  if(aiGenerating[id])return;
+  aiGenerating[id]=true;
   var btn=document.getElementById('gen-btn-'+id);if(btn){btn.disabled=true;btn.textContent='Generating…';}
   AIS[id]='loading';AID[id]={};refreshAib(id);
   genInsightsAI(t,rg,note).then(function(data){
-    AID[id]=data;AIS[id]='done';refreshAib(id);saveToSupabase();
+    AID[id]=data;AIS[id]='done';aiGenerating[id]=false;refreshAib(id);saveToSupabase();
   }).catch(function(err){
-    AIS[id]='error';AID[id]={error:err.message||'Could not generate. Try again.'};refreshAib(id);
+    AIS[id]='error';AID[id]={error:err.message||'Could not generate. Try again.'};aiGenerating[id]=false;refreshAib(id);
   });
 }
 
