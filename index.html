@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TA Strategic Org Radar</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.7/axios.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+:root{--bg:#f5f4f0;--surface:#fff;--surface2:#f0efe9;--surface3:#e8e7e0;--border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.15);--text:#1a1a18;--text2:#4a4a44;--text3:#9a9a90;--ta:#5a4fcf;--warn:#c47d1a;--danger:#c0392b;--rag-g:#1e9e72;--rag-g-l:rgba(30,158,114,0.12);--rag-a:#c47d1a;--rag-a-l:rgba(196,125,26,0.12);--rag-r:#c0392b;--rag-r-l:rgba(192,57,43,0.1);--radius:12px;--radius-sm:8px;--mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6;min-height:100vh;}
+
+/* ── AUTH SCREEN ── */
+.auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+.auth-card{background:var(--surface);border-radius:var(--radius);padding:48px 40px;max-width:420px;width:100%;box-shadow:0 4px 32px rgba(0,0,0,0.08);text-align:center;}
+.auth-logo{font-family:var(--mono);font-size:11px;color:var(--ta);letter-spacing:.16em;text-transform:uppercase;margin-bottom:24px;}
+.auth-title{font-size:24px;font-weight:600;color:var(--text);margin-bottom:10px;}
+.auth-desc{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:32px;}
+.auth-btn{display:inline-flex;align-items:center;gap:10px;padding:12px 24px;background:var(--surface);border:1.5px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--sans);font-size:14px;font-weight:500;color:var(--text);cursor:pointer;transition:all .15s;width:100%;justify-content:center;}
+.auth-btn:hover{background:var(--surface2);border-color:var(--ta);}
+.auth-btn svg{flex-shrink:0;}
+.auth-error{margin-top:14px;font-size:12px;color:var(--danger);}
+.auth-footer{margin-top:28px;font-size:11px;color:var(--text3);line-height:1.6;}
+
+/* ── MAIN APP ── */
+.app{display:none;grid-template-columns:1fr 430px;height:100vh;overflow:hidden;}
+.app.visible{display:grid;}
+.map-pane{position:relative;overflow:hidden;background:var(--bg);display:flex;flex-direction:column;}
+.detail-pane{background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;}
+.header{padding:13px 20px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.header-left{display:flex;align-items:center;gap:10px;}
+.logo{font-family:var(--mono);font-size:11px;color:var(--ta);letter-spacing:.12em;text-transform:uppercase;font-weight:500;}
+.hdiv{width:1px;height:18px;background:var(--border2);flex-shrink:0;}
+.htitle{font-size:14px;font-weight:600;color:var(--text);}
+.header-actions{display:flex;align-items:center;gap:8px;}
+.ctx-pill{font-family:var(--mono);font-size:10px;color:var(--ta);background:rgba(90,79,207,0.08);border:1px solid rgba(90,79,207,0.2);border-radius:20px;padding:3px 9px;letter-spacing:.06em;}
+.user-chip{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2);}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:var(--ta);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;}
+.save-indicator{font-family:var(--mono);font-size:10px;letter-spacing:.06em;opacity:0;transition:opacity .3s;}
+.save-indicator.show{opacity:1;}
+.btn{padding:7px 13px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--surface2);font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .15s;white-space:nowrap;}
+.btn:hover{background:var(--surface3);color:var(--text);}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+.btn-primary{background:var(--ta);border-color:var(--ta);color:#fff;}
+.btn-primary:hover{opacity:.88;color:#fff;}
+.btn-sm{padding:5px 10px;font-size:11px;}
+.btn-danger{border-color:rgba(192,57,43,0.3);color:var(--danger);}
+.btn-danger:hover{background:rgba(192,57,43,0.07);}
+.btn-ghost{border-color:transparent;background:transparent;padding:3px 7px;}
+.btn-ghost:hover{background:var(--surface2);border-color:var(--border);}
+.btn-signout{border-color:transparent;background:transparent;font-size:11px;color:var(--text3);padding:3px 6px;}
+.btn-signout:hover{color:var(--danger);background:transparent;}
+.map-wrap{flex:1;position:relative;overflow:hidden;}
+.map-hint{position:absolute;top:12px;left:14px;font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;pointer-events:none;z-index:5;}
+svg#map{width:100%;height:100%;}
+.node{cursor:grab;}.node:active{cursor:grabbing;}
+.node-bg{transition:opacity .2s;opacity:.85;}
+.node:hover .node-bg,.node.active .node-bg{opacity:1;}
+.edge{fill:none;stroke-width:1.5;}
+.edge.dashed{stroke-dasharray:5 4;}
+.edge.animated{animation:dash 10s linear infinite;}
+@keyframes dash{to{stroke-dashoffset:-100;}}
+.legend{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:5px;z-index:10;pointer-events:none;background:rgba(255,255,255,0.93);padding:10px 13px;border-radius:var(--radius-sm);border:1px solid var(--border);}
+.legend-title{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;}
+.legend-item{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text2);}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.priority-bar{flex-shrink:0;border-top:1px solid var(--border);background:var(--surface);padding:11px 18px;max-height:185px;overflow-y:auto;}
+.priority-bar.hidden{display:none;}
+.priority-title{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px;}
+.priority-list{display:flex;flex-direction:column;gap:5px;}
+.priority-item{display:flex;align-items:flex-start;gap:9px;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);cursor:pointer;transition:border-color .15s;}
+.priority-item:hover{border-color:var(--border2);}
+.p-rag{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.p-name{font-size:12px;font-weight:500;color:var(--text);min-width:110px;}
+.p-note{font-size:11px;color:var(--text3);line-height:1.4;flex:1;}
+.p-nonote{color:var(--danger);font-style:italic;}
+.detail-intro{padding:24px 24px 20px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.logo-sm{font-family:var(--mono);font-size:10px;color:var(--ta);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;}
+.intro-title{font-size:20px;font-weight:600;color:var(--text);margin-bottom:10px;}
+.intro-desc{font-size:13px;color:var(--text2);line-height:1.7;}
+.ctx-status{margin-top:16px;font-size:12px;display:flex;align-items:center;gap:6px;}
+.ctx-sbtn{background:none;border:none;padding:0;font-family:var(--sans);font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+.ctx-sbtn.warn{color:var(--warn);}
+.ctx-sbtn.edit{color:var(--ta);}
+.detail-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:40px;text-align:center;}
+.empty-title{font-size:14px;font-weight:500;color:var(--text2);}
+.empty-sub{font-size:12px;color:var(--text3);max-width:220px;}
+.detail-hero{padding:20px 24px;border-bottom:1px solid var(--border);}
+.detail-badge{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:3px 10px;border-radius:20px;display:inline-flex;margin-bottom:9px;}
+.detail-name{font-size:19px;font-weight:600;color:var(--text);margin-bottom:8px;}
+.what-wrap{position:relative;}
+.detail-what{font-size:13px;color:var(--text2);line-height:1.7;}
+.edit-what-btn{position:absolute;top:0;right:0;opacity:0;transition:opacity .15s;}
+.what-wrap:hover .edit-what-btn{opacity:1;}
+.what-textarea{width:100%;background:var(--surface2);border:1px solid var(--ta);border-radius:var(--radius-sm);padding:9px 11px;font-family:var(--sans);font-size:13px;color:var(--text);resize:none;line-height:1.7;min-height:90px;}
+.what-textarea:focus{outline:none;}
+.what-edit-actions{display:flex;gap:6px;margin-top:6px;}
+.head-chip{display:flex;align-items:center;gap:8px;margin-top:12px;}
+.head-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;}
+.head-name{font-size:13px;font-weight:500;color:var(--text);}
+.head-title-text{font-size:11px;color:var(--text3);}
+.subteams-section{margin-top:14px;border-top:1px solid var(--border);padding-top:12px;}
+.subteams-title{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;}
+.subteam-row{border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;overflow:hidden;}
+.subteam-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer;background:var(--surface2);transition:background .15s;}
+.subteam-header:hover{background:var(--surface3);}
+.subteam-header-left{display:flex;align-items:center;gap:8px;}
+.subteam-avatar{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;}
+.subteam-name{font-size:12px;font-weight:500;color:var(--text);}
+.subteam-leader{font-size:11px;color:var(--text3);}
+.subteam-chevron{font-size:10px;color:var(--text3);transition:transform .2s;}
+.subteam-chevron.open{transform:rotate(180deg);}
+.subteam-body{padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.6;background:var(--surface);display:none;}
+.subteam-body.open{display:block;}
+.detail-sections{padding:0 24px 28px;display:flex;flex-direction:column;gap:18px;margin-top:18px;}
+.section-label{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;}
+.rag-section{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;}
+.rag-nudge{font-size:11px;color:var(--text3);margin-bottom:10px;font-style:italic;}
+.rag-options{display:flex;gap:7px;margin-bottom:12px;}
+.rag-btn{flex:1;padding:7px 4px;border-radius:var(--radius-sm);border:1.5px solid var(--border2);background:var(--surface);font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;text-align:center;transition:all .15s;color:var(--text2);}
+.rag-btn.sel-g{background:var(--rag-g-l);border-color:var(--rag-g);color:var(--rag-g);}
+.rag-btn.sel-a{background:var(--rag-a-l);border-color:var(--rag-a);color:var(--rag-a);}
+.rag-btn.sel-r{background:var(--rag-r-l);border-color:var(--rag-r);color:var(--rag-r);}
+.rag-note-label{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;}
+.rag-note{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 11px;color:var(--text);font-family:var(--sans);font-size:12px;resize:none;line-height:1.5;min-height:68px;}
+.rag-note:focus{outline:none;border-color:var(--ta);}
+.rag-note::placeholder{color:var(--text3);}
+.ai-ctx-nudge{font-size:11px;color:var(--warn);margin:8px 0 4px;display:flex;align-items:center;gap:5px;}
+.ai-ctx-nudge button{background:none;border:none;padding:0;font-family:var(--sans);font-size:11px;color:var(--ta);cursor:pointer;text-decoration:underline;}
+.ai-insight-block{margin-top:11px;background:rgba(90,79,207,0.05);border:1px solid rgba(90,79,207,0.18);border-radius:var(--radius-sm);padding:12px 14px;}
+.ai-label{font-family:var(--mono);font-size:9px;color:var(--ta);letter-spacing:.1em;text-transform:uppercase;margin-bottom:9px;}
+.ai-loading{font-size:12px;color:var(--text3);font-style:italic;}
+.ai-error{font-size:12px;color:var(--danger);margin-top:6px;}
+.ai-section{margin-bottom:13px;padding-bottom:13px;border-bottom:1px solid rgba(90,79,207,0.1);}
+.ai-section:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none;}
+.ai-section-title{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;}
+.ai-content{font-size:12px;color:var(--text2);line-height:1.6;}
+.ai-content ul{padding-left:14px;}
+.ai-content li{margin-bottom:3px;}
+.ai-actions{display:flex;gap:6px;margin-top:7px;align-items:center;}
+.ai-accepted{font-size:11px;color:var(--rag-g);font-family:var(--mono);margin-right:4px;}
+.ai-override{font-size:11px;color:var(--warn);font-family:var(--mono);margin-right:4px;}
+.ai-edit-area{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-family:var(--sans);font-size:12px;color:var(--text);resize:none;line-height:1.5;min-height:80px;margin-top:6px;}
+.ai-edit-area:focus{outline:none;border-color:var(--ta);}
+.value-list{display:flex;flex-direction:column;gap:7px;}
+.value-item{display:flex;gap:9px;font-size:13px;color:var(--text2);line-height:1.55;}
+.value-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:7px;}
+.connects-list{display:flex;flex-wrap:wrap;gap:5px;}
+.connect-tag{font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid var(--border2);color:var(--text2);background:var(--surface2);}
+.questions-list{display:flex;flex-direction:column;gap:5px;}
+.question-item{background:var(--surface2);border-radius:var(--radius-sm);padding:9px 11px;font-size:12px;color:var(--text2);border:1px solid var(--border);line-height:1.5;transition:border-color .15s;}
+.question-item:hover{border-color:var(--ta);color:var(--text);}
+.hire-volume{display:flex;align-items:center;gap:8px;}
+.hire-dots{display:flex;gap:4px;}
+.hire-dot{width:9px;height:9px;border-radius:50%;}
+.hire-dot.filled{background:var(--ta);}
+.hire-dot.empty{background:var(--surface2);border:1px solid var(--border2);}
+.hire-label{font-size:12px;color:var(--text3);}
+.bn-card{background:rgba(192,57,43,0.05);border:1px solid rgba(192,57,43,0.16);border-radius:var(--radius-sm);padding:11px 13px;}
+.bn-label{font-family:var(--mono);font-size:10px;color:var(--danger);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;}
+.bn-text{font-size:12px;color:#a03020;line-height:1.6;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.38);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.hidden{display:none;}
+.modal{background:var(--surface);border-radius:var(--radius);padding:24px;width:100%;max-width:540px;max-height:86vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.14);}
+.modal-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.modal-sub{font-size:12px;color:var(--text3);margin-bottom:18px;}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.settings-grid.full{grid-template-columns:1fr;}
+.field-group{display:flex;flex-direction:column;gap:5px;}
+.field-label{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;}
+.field-input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 11px;font-family:var(--sans);font-size:13px;color:var(--text);width:100%;}
+.field-input:focus{outline:none;border-color:var(--ta);}
+.field-select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 11px;font-family:var(--sans);font-size:13px;color:var(--text);width:100%;cursor:pointer;}
+.field-select:focus{outline:none;border-color:var(--ta);}
+.field-textarea{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 11px;font-family:var(--sans);font-size:13px;color:var(--text);width:100%;resize:none;min-height:64px;line-height:1.5;}
+.field-textarea:focus{outline:none;border-color:var(--ta);}
+.field-hint{font-size:11px;color:var(--text3);margin-top:2px;}
+.stitle{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin:16px 0 10px;padding-top:16px;border-top:1px solid var(--border);}
+.stitle:first-of-type{margin-top:0;padding-top:0;border-top:none;}
+.dept-list{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.dacc{border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
+.dacc-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface2);cursor:pointer;user-select:none;transition:background .15s;}
+.dacc-header:hover{background:var(--surface3);}
+.dacc-header-left{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--text);}
+.dacc-chevron{font-size:11px;color:var(--text3);transition:transform .2s;}
+.dacc-chevron.open{transform:rotate(180deg);}
+.dacc-header-actions{display:flex;align-items:center;gap:6px;}
+.dacc-body{display:none;padding:14px;background:var(--surface);border-top:1px solid var(--border);}
+.dacc-body.open{display:block;}
+.dept-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-family:var(--sans);font-size:13px;color:var(--text);}
+.dept-input:focus{outline:none;border-color:var(--ta);}
+.dept-input.sm{font-size:12px;padding:6px 9px;}
+.dept-desc{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-family:var(--sans);font-size:12px;color:var(--text2);resize:none;min-height:56px;line-height:1.5;margin-top:8px;}
+.dept-desc:focus{outline:none;border-color:var(--ta);}
+.dept-field-row{display:flex;gap:8px;margin-top:8px;}
+.subteam-list{display:flex;flex-direction:column;gap:5px;margin-top:10px;}
+.subteam-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 11px;display:flex;flex-direction:column;gap:6px;}
+.subteam-item-top{display:flex;align-items:center;gap:6px;}
+.subteam-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 8px;font-family:var(--sans);font-size:12px;color:var(--text);}
+.subteam-input:focus{outline:none;border-color:var(--ta);}
+.subteam-desc{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 8px;font-family:var(--sans);font-size:11px;color:var(--text2);resize:none;min-height:48px;line-height:1.5;}
+.subteam-desc:focus{outline:none;border-color:var(--ta);}
+.subteam-gen-note{font-size:10px;color:var(--text3);font-style:italic;margin-top:2px;}
+.add-subteam-row{display:flex;gap:6px;margin-top:8px;}
+.add-subteam-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 9px;font-family:var(--sans);font-size:12px;color:var(--text);}
+.add-subteam-input:focus{outline:none;border-color:var(--ta);}
+.add-row{display:flex;gap:7px;margin-bottom:14px;}
+.add-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 11px;font-family:var(--sans);font-size:13px;color:var(--text);}
+.add-input:focus{outline:none;border-color:var(--ta);}
+.gen-status{font-size:11px;color:var(--text3);font-style:italic;margin-bottom:10px;min-height:16px;}
+.confirm-inline{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--danger);}
+.confirm-inline button{padding:2px 7px;font-size:11px;}
+
+/* API Key modal */
+.api-key-section{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-top:12px;}
+.api-key-label{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;}
+.api-key-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 11px;font-family:var(--mono);font-size:12px;color:var(--text);}
+.api-key-input:focus{outline:none;border-color:var(--ta);}
+.api-key-hint{font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5;}
+.api-key-hint a{color:var(--ta);}
+</style>
+</head>
+<body>
+
+<!-- ── AUTH SCREEN ── -->
+<div class="auth-screen" id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">TA // SOR</div>
+    <div class="auth-title">TA Strategic Org Radar</div>
+    <div class="auth-desc">A structured way to assess, prioritise, and act on your key stakeholder relationships. Sign in to save your data across sessions and devices.</div>
+    <button class="auth-btn" onclick="signInWithGoogle()">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.859-3.048.859-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 6.294C4.672 4.167 6.656 3.58 9 3.58z"/></svg>
+      Sign in with Google
+    </button>
+    <div class="auth-error hidden" id="auth-error"></div>
+    <div class="auth-footer">Your data is private and never shared with other users.<br/>Each account gets its own isolated workspace.</div>
+  </div>
+</div>
+
+<!-- ── MAIN APP ── -->
+<div class="app" id="app">
+  <div class="map-pane">
+    <div class="header">
+      <div class="header-left">
+        <span class="logo">TA // SOR</span>
+        <div class="hdiv"></div>
+        <span class="htitle">TA Strategic Org Radar</span>
+      </div>
+      <div class="header-actions">
+        <span class="save-indicator" id="save-indicator">✓ Saved</span>
+        <span class="ctx-pill hidden" id="ctx-pill">⚙ Context active</span>
+        <button class="btn btn-sm" onclick="openSettings()">⚙ Company settings</button>
+        <button class="btn btn-sm" onclick="openDeptModal()">⊕ Manage departments</button>
+        <div class="user-chip">
+          <div class="user-avatar" id="user-avatar">?</div>
+          <button class="btn-signout" onclick="signOut()">Sign out</button>
+        </div>
+      </div>
+    </div>
+    <div class="map-wrap">
+      <div class="map-hint">Drag to reposition · Click to assess</div>
+      <svg id="map" viewBox="0 0 700 520"></svg>
+      <div class="legend">
+        <div class="legend-title">Relationship health</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--rag-g)"></div>Green — working well</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--rag-a)"></div>Amber — needs attention</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--rag-r)"></div>Red — priority gap</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ccc"></div>Unrated</div>
+      </div>
+    </div>
+    <div class="priority-bar hidden" id="priority-bar">
+      <div class="priority-title">Priority gaps — fix these first</div>
+      <div class="priority-list" id="priority-list"></div>
+    </div>
+  </div>
+  <div class="detail-pane">
+    <div class="detail-intro">
+      <div class="logo-sm">TA // SOR</div>
+      <div class="intro-title">TA Strategic Org Radar</div>
+      <div class="intro-desc">A structured way to assess, prioritise, and act on your key stakeholder relationships. Rate each one honestly, add context, and let AI help surface what's broken, what's at risk, and where TA can add the most strategic value.</div>
+      <div class="ctx-status" id="ctx-status"></div>
+    </div>
+    <div id="detail-empty" class="detail-empty">
+      <div style="width:38px;height:38px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="var(--text3)" stroke-width="1.2"/><path d="M9 6v4M9 12v.5" stroke="var(--text3)" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+      <div class="empty-title">Select a team</div>
+      <div class="empty-sub">Click any node on the map to assess that relationship and generate AI insights tailored to your situation.</div>
+    </div>
+    <div id="detail-content" style="display:none;flex:1;flex-direction:column;"></div>
+  </div>
+</div>
+
+<!-- Settings -->
+<div class="modal-overlay hidden" id="settings-overlay">
+  <div class="modal">
+    <div class="modal-title">Company settings</div>
+    <div class="modal-sub">This context is injected into every AI call — the more accurate it is, the more relevant the insights.</div>
+    <div class="stitle">Company</div>
+    <div class="settings-grid">
+      <div class="field-group"><label class="field-label">Company name</label><input class="field-input" id="s-name" placeholder="e.g. Acme Corp"/></div>
+      <div class="field-group"><label class="field-label">Industry / sector</label><input class="field-input" id="s-industry" placeholder="e.g. B2B SaaS, Fintech"/></div>
+      <div class="field-group"><label class="field-label">Company stage</label><select class="field-select" id="s-stage"><option value="">Select stage…</option><option>Series A</option><option>Series B</option><option>Series C</option><option>Series D</option><option>Series E+</option><option>Post-IPO</option><option>Bootstrapped</option></select></div>
+      <div class="field-group"><label class="field-label">Total headcount</label><select class="field-select" id="s-headcount"><option value="">Select size…</option><option>1–50</option><option>51–150</option><option>151–300</option><option>301–600</option><option>601–1000</option><option>1000+</option></select></div>
+    </div>
+    <div class="stitle">Talent acquisition</div>
+    <div class="settings-grid">
+      <div class="field-group"><label class="field-label">TA team size</label><select class="field-select" id="s-ta-size"><option value="">Select…</option><option>Solo (just me)</option><option>2–3 people</option><option>4–6 people</option><option>7–10 people</option><option>10+ people</option></select></div>
+      <div class="field-group"><label class="field-label">Annual hiring target</label><select class="field-select" id="s-hiring-vol"><option value="">Select…</option><option>Under 10 hires</option><option>10–25 hires</option><option>26–50 hires</option><option>51–100 hires</option><option>100+ hires</option></select></div>
+    </div>
+    <div class="stitle">Scope &amp; priorities</div>
+    <div class="settings-grid full">
+      <div class="field-group"><label class="field-label">Regions hiring in</label><input class="field-input" id="s-regions" placeholder="e.g. EMEA, North America, APAC"/></div>
+      <div class="field-group" style="margin-top:10px;"><label class="field-label">Current hiring focus</label><input class="field-input" id="s-focus" placeholder="e.g. GTM-heavy, scaling engineering"/></div>
+      <div class="field-group" style="margin-top:10px;"><label class="field-label">Biggest TA challenge right now</label><textarea class="field-textarea" id="s-challenge" placeholder="e.g. Long time-to-hire, comp bands out of market…"></textarea><div class="field-hint">Included in every AI insight — be honest.</div></div>
+    </div>
+    <div class="stitle">AI configuration</div>
+    <div class="api-key-section">
+      <div class="api-key-label">Gemini API key</div>
+      <input class="api-key-input" id="s-apikey" type="password" placeholder="Paste your Gemini API key here…"/>
+      <div class="api-key-hint">Get a free API key at <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>. Your key is stored privately in your account and never shared.</div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeSettings()">Cancel</button><button class="btn btn-primary" onclick="saveSettings()">Save context</button></div>
+  </div>
+</div>
+
+<!-- Departments -->
+<div class="modal-overlay hidden" id="dept-overlay">
+  <div class="modal">
+    <div class="modal-title">Manage departments</div>
+    <div class="modal-sub">Click any department to expand and edit. Add new ones below — AI generates content automatically.</div>
+    <div class="gen-status" id="gen-status"></div>
+    <div class="dept-list" id="dept-list"></div>
+    <div class="add-row">
+      <input class="add-input" id="new-dept-input" placeholder="New department name (e.g. Legal, RevOps)…" maxlength="26"/>
+      <button class="btn btn-primary btn-sm" id="add-dept-btn" onclick="addDept()">Add</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeDeptModal()">Cancel</button>
+      <button class="btn btn-primary" id="save-dept-btn" onclick="saveDeptModal()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG — REPLACE THESE WITH YOUR VALUES ───────────────────────────────────
+var SUPABASE_URL = 'https://zvxegnjamhqgflvgmdky.supabase.co';
+var SUPABASE_ANON_KEY = 'sb_publishable_50MxkNtrXOyZjLUqr3CRHw_5upmwv1n';
+// ─────────────────────────────────────────────────────────────────────────────
+
+var currentUser = null;
+var userApiKey = '';
+var saveTimer = null;
+var activeNode = null;
+var editingWhat = null;
+var expandedDept = null;
+var genCount = 0;
+var pendingDepts = {};
+
+var RAG={}, NOTES={}, AID={}, AIS={};
+var companyCtx={};
+var teams={}, tOrder=[];
+
+var POS=[{x:350,y:270},{x:350,y:82},{x:565,y:155},{x:575,y:375},{x:118,y:185},{x:118,y:375},{x:505,y:82},{x:488,y:458},{x:210,y:458},{x:200,y:82}];
+var EPOS=[{x:570,y:270},{x:118,y:270},{x:350,y:460},{x:430,y:158},{x:268,y:158},{x:490,y:340},{x:210,y:340}];
+var RC={G:"#1e9e72",A:"#c47d1a",R:"#c0392b",U:"#cccccc"};
+var DC=["#5a7fcf","#2d9dd2","#1e8e72","#b07d1a","#8e4fcf","#2d7d9a","#7a6e40"];
+
+var svg=document.getElementById('map');
+var ns='http://www.w3.org/2000/svg';
+
+var DT={ta:{label:"Talent acquisition",color:"#5a4fcf",colorLight:"rgba(90,79,207,0.12)",badge:"Centre of the map",badgeBg:"rgba(90,79,207,0.1)",badgeColor:"#5a4fcf",what:"TA sits at the intersection of every team in the business. It doesn't just fill roles — it translates business strategy into people, unblocks growth, and surfaces organisational health signals no one else can see.",value:["Turn headcount plans into hiring roadmaps before pipelines are needed","Report on hiring as a business metric, not an HR one","Use data from every function to advise leadership on growth risk"],connects:["All teams","Exec (mandate)","Finance (headcount)","People ops (handoff)"],bottleneck:null,questions:["How does TA currently report to leadership?","Which team relationships feel most transactional?","Where does TA have the most strategic influence today?"],hiringVolume:5,isCentre:true,head:'',headTitle:'',subteams:[]},exec:{label:"Exec / leadership",color:"#c47d1a",colorLight:"rgba(196,125,26,0.1)",badge:"Strategy setter",badgeBg:"rgba(196,125,26,0.1)",badgeColor:"#c47d1a",what:"Sets company direction, approves headcount, and defines the teams TA hires into. Every role ultimately traces back to a strategic decision made at this level.",value:["Bring TA into planning cycles early","Present hiring velocity as a business risk metric","Flag when role briefs are misaligned with market"],connects:["TA (hiring mandate)","Finance (headcount budget)","All HMs (org design)"],bottleneck:null,questions:["Does TA have a seat in quarterly planning?","How far in advance does exec share growth plans?","Is TA asked to validate headcount feasibility?"],hiringVolume:2,head:'',headTitle:'',subteams:[]},engineering:{label:"Engineering / product",color:"#2d7dd2",colorLight:"rgba(45,125,210,0.1)",badge:"Highest hiring volume",badgeBg:"rgba(45,125,210,0.1)",badgeColor:"#2d7dd2",what:"The team TA hires most into at most tech scaleups. Hiring engineers and PMs directly determines product velocity. Every open role has a measurable cost to roadmap delivery.",value:["Turn vague job briefs into structured scorecards","Track interview-to-offer conversion rates","Advise on whether role specs match market availability"],connects:["TA (constant pipeline)","Exec (roadmap)","Sales (product enables revenue)"],bottleneck:null,questions:["How structured are engineering interview panels?","What's the average time from screen to offer?","Do hiring managers give structured feedback after every interview?"],hiringVolume:5,head:'',headTitle:'',subteams:[]},sales:{label:"Sales / GTM",color:"#1e9e72",colorLight:"rgba(30,158,114,0.1)",badge:"Revenue unlocker",badgeBg:"rgba(30,158,114,0.1)",badgeColor:"#1e9e72",what:"A single unfilled AE or SDR role has a direct, measurable revenue impact. Time-to-fill in GTM translates directly to pipeline at risk.",value:["Quantify pipeline risk from open GTM roles in £/$ terms","Track time-to-productivity for new hires","Align with sales leadership on ramp expectations"],connects:["TA (quota-carrying hires)","Finance (revenue forecast)","Exec (growth targets)"],bottleneck:null,questions:["Does TA know the £ value of each unfilled GTM role?","How aligned are TA and sales on what 'great' looks like?","Are ramp timelines factored into hiring urgency?"],hiringVolume:4,head:'',headTitle:'',subteams:[]},finance:{label:"Finance",color:"#c0392b",colorLight:"rgba(192,57,43,0.08)",badge:"Headcount gatekeeper",badgeBg:"rgba(192,57,43,0.08)",badgeColor:"#c0392b",what:"Approves headcount, sets comp bands, and controls budget releases. Finance is often TA's most important — and most neglected — relationship.",value:["Build a shared headcount tracker","Translate delayed approvals into revenue impact","Advocate for comp band reviews when roles go cold"],connects:["Exec (budget)","TA (headcount release)","People ops (comp bands)"],bottleneck:null,questions:["How does TA get notified when headcount is approved?","Is there a live headcount tracker shared with Finance?","When were comp bands last reviewed against market rates?"],hiringVolume:2,head:'',headTitle:'',subteams:[]},hr:{label:"People ops / HR",color:"#c47d1a",colorLight:"rgba(196,125,26,0.1)",badge:"TA's closest partner",badgeBg:"rgba(196,125,26,0.1)",badgeColor:"#c47d1a",what:"Owns the employee lifecycle from offer acceptance onwards. The handoff point from TA — what happens after hire directly reflects on TA's reputation.",value:["Align on what 'great candidate' means for retention","Share feedback data to improve onboarding","Collaborate on EVP messaging and offer construction"],connects:["TA (candidate handoff)","Finance (comp)","Exec (people strategy)"],bottleneck:null,questions:["How does TA hand off candidates to HR post-offer?","Is retention data shared back to inform hiring?","Do TA and HR co-own the EVP?"],hiringVolume:3,head:'',headTitle:'',subteams:[]},marketing:{label:"Marketing",color:"#8e4fcf",colorLight:"rgba(142,79,207,0.1)",badge:"Employer brand ally",badgeBg:"rgba(142,79,207,0.1)",badgeColor:"#8e4fcf",what:"Owns external brand and channels. Can be a powerful TA ally for employer brand — but is almost always siloed from recruiting in practice.",value:["Co-own the employer brand strategy","Treat job ads as content, not listings","Leverage product launches to attract passive candidates"],connects:["TA (employer brand)","Exec (brand direction)","Sales (GTM messaging)"],bottleneck:null,questions:["Does TA have input into how the company presents as an employer?","When did TA and marketing last collaborate?","Is there a shared content calendar for employer brand?"],hiringVolume:3,head:'',headTitle:'',subteams:[]},cs:{label:"Customer success",color:"#1e9e72",colorLight:"rgba(30,158,114,0.1)",badge:"Retention-linked hiring",badgeBg:"rgba(30,158,114,0.1)",badgeColor:"#1e9e72",what:"Owns post-sale relationships and renewal revenue. CS hiring directly affects churn risk and NPS — often undervalued relative to commercial impact.",value:["Frame CS hiring in terms of NRR and churn risk","Define what great CS talent looks like with CS leaders","Build a pipeline before headcount is approved"],connects:["TA (specialist pipeline)","Sales (handoff)","Finance (NRR)"],bottleneck:null,questions:["Does TA understand the commercial impact of CS vacancies?","How quickly do CS roles currently fill?","Are CS roles consistently scoped correctly?"],hiringVolume:3,head:'',headTitle:'',subteams:[]},data:{label:"Data / analytics",color:"#2d7d9a",colorLight:"rgba(45,125,154,0.1)",badge:"Specialist talent",badgeBg:"rgba(45,125,154,0.1)",badgeColor:"#2d7d9a",what:"Increasingly critical at Series C+ — data roles are in short supply and frequently mis-benchmarked. Require TA to understand technical depth.",value:["Build specialist sourcing channels for data talent","Develop assessments that don't waste candidate time","Advise on market rates — data roles are frequently mis-benchmarked"],connects:["TA (specialist sourcing)","Engineering (tooling)","Finance (forecasting)"],bottleneck:null,questions:["Does TA have a dedicated approach for data vs. general tech?","Are data hiring managers involved in defining sourcing criteria?","How does TA benchmark data salaries?"],hiringVolume:3,head:'',headTitle:'',subteams:[]},ops:{label:"Operations",color:"#6b6b60",colorLight:"rgba(107,107,96,0.1)",badge:"Enablement",badgeBg:"rgba(107,107,96,0.1)",badgeColor:"#6b6b60",what:"Manages systems, processes, and infrastructure. Often overlooked by TA until there's a systems crisis.",value:["Map the pre-boarding checklist for delays","Flag contract bottlenecks before they push start dates","Involve Ops in ATS decisions early"],connects:["TA (systems & compliance)","Finance (process)","People ops (onboarding)"],bottleneck:null,questions:["Who owns the ATS relationship — TA or Ops?","How many days from offer acceptance to Day 1 readiness?","Are there recurring compliance delays in the offer process?"],hiringVolume:2,head:'',headTitle:'',subteams:[]}};
+
+function gp(i){return i<POS.length?POS[i]:EPOS[(i-POS.length)%EPOS.length];}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ── SUPABASE AUTH ─────────────────────────────────────────────────────────────
+function supabaseHeaders(token){
+  var h={'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY};
+  if(token)h['Authorization']='Bearer '+token;
+  return h;
+}
+
+function signInWithGoogle(){
+  var redirectTo=window.location.origin+window.location.pathname;
+  window.location.href=SUPABASE_URL+'/auth/v1/authorize?provider=google&redirect_to='+encodeURIComponent(redirectTo);
+}
+
+function signOut(){
+  var token=getToken();
+  fetch(SUPABASE_URL+'/auth/v1/logout',{method:'POST',headers:supabaseHeaders(token)})
+    .finally(function(){
+      clearToken();
+      currentUser=null;
+      document.getElementById('app').classList.remove('visible');
+      document.getElementById('auth-screen').style.display='flex';
+    });
+}
+
+function getToken(){return localStorage.getItem('ta-sor-token');}
+function setToken(t){localStorage.setItem('ta-sor-token',t);}
+function clearToken(){localStorage.removeItem('ta-sor-token');}
+
+function handleAuthCallback(){
+  var hash=window.location.hash;
+  if(!hash)return false;
+  var params=new URLSearchParams(hash.replace('#',''));
+  var accessToken=params.get('access_token');
+  var refreshToken=params.get('refresh_token');
+  if(!accessToken)return false;
+  setToken(accessToken);
+  if(refreshToken)localStorage.setItem('ta-sor-refresh',refreshToken);
+  window.history.replaceState(null,'',window.location.pathname);
+  return true;
+}
+
+function getUser(){
+  var token=getToken();
+  if(!token)return Promise.resolve(null);
+  return fetch(SUPABASE_URL+'/auth/v1/user',{headers:supabaseHeaders(token)})
+    .then(function(r){return r.json();})
+    .then(function(d){return d.id?d:null;})
+    .catch(function(){return null;});
+}
+
+// ── SUPABASE DATA ─────────────────────────────────────────────────────────────
+function loadFromSupabase(){
+  var token=getToken();
+  if(!token||!currentUser)return Promise.resolve();
+  return fetch(SUPABASE_URL+'/rest/v1/user_data?user_id=eq.'+currentUser.id+'&select=payload',{headers:supabaseHeaders(token)})
+    .then(function(r){return r.json();})
+    .then(function(rows){
+      if(!rows||!rows.length||!rows[0].payload)return;
+      var d=rows[0].payload;
+      if(d.RAG)RAG=d.RAG;
+      if(d.NOTES)NOTES=d.NOTES;
+      if(d.AID)AID=d.AID;
+      if(d.AIS){Object.keys(d.AIS).forEach(function(id){AIS[id]=d.AIS[id]==='loading'?'idle':d.AIS[id];});}
+      if(d.ctx)companyCtx=d.ctx;
+      if(d.apiKey)userApiKey=d.apiKey;
+      if(d.custom){Object.keys(d.custom).forEach(function(id){teams[id]=d.custom[id];if(!teams[id].subteams)teams[id].subteams=[];});}
+      if(d.tOrder){tOrder=d.tOrder.filter(function(id){return!!teams[id];});Object.keys(teams).forEach(function(id){if(tOrder.indexOf(id)<0)tOrder.push(id);});}
+      if(d.POS&&d.POS.length){for(var i=0;i<d.POS.length&&i<POS.length;i++)POS[i]=d.POS[i];}
+    }).catch(function(e){console.warn('Load failed:',e);});
+}
+
+function saveToSupabase(){
+  var token=getToken();
+  if(!token||!currentUser)return;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(function(){
+    var custom={};
+    tOrder.forEach(function(id){
+      if(!DT[id])custom[id]=teams[id];
+      else if(teams[id].head||teams[id].headTitle||teams[id].what!==DT[id].what||(teams[id].subteams&&teams[id].subteams.length))custom[id]=teams[id];
+    });
+    var payload={RAG:RAG,NOTES:NOTES,AID:AID,AIS:AIS,ctx:companyCtx,apiKey:userApiKey,custom:custom,tOrder:tOrder,POS:POS.slice()};
+    fetch(SUPABASE_URL+'/rest/v1/user_data',{
+      method:'POST',
+      headers:Object.assign({},supabaseHeaders(token),{'Prefer':'resolution=merge-duplicates'}),
+      body:JSON.stringify({user_id:currentUser.id,payload:payload,updated_at:new Date().toISOString()})
+    }).then(function(r){
+      if(r.ok)showSaved();
+      else showSaveFailed();
+    }).catch(function(){showSaveFailed();});
+  },600);
+}
+
+function showSaved(){
+  var el=document.getElementById('save-indicator');if(!el)return;
+  el.style.color='var(--rag-g)';el.textContent='✓ Saved';el.classList.add('show');
+  setTimeout(function(){el.classList.remove('show');},2000);
+}
+function showSaveFailed(){
+  var el=document.getElementById('save-indicator');if(!el)return;
+  el.style.color='var(--danger)';el.textContent='⚠ Save failed';el.classList.add('show');
+  setTimeout(function(){el.classList.remove('show');},3000);
+}
+
+// ── GEMINI AI ─────────────────────────────────────────────────────────────────
+function callGemini(prompt){
+  if(!userApiKey)return Promise.reject(new Error('No API key set. Add your Gemini API key in Company settings.'));
+  return fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key='+userApiKey,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:1000}})
+  }).then(function(r){
+    if(!r.ok)throw new Error('Gemini API error: '+r.status);
+    return r.json();
+  }).then(function(d){
+    var text=d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts&&d.candidates[0].content.parts[0]&&d.candidates[0].content.parts[0].text;
+    if(!text)throw new Error('Empty response from Gemini');
+    return text.trim();
+  });
+}
+
+function extractJSON(raw){var m=raw.match(/\{[\s\S]*\}/);if(!m)throw new Error('No JSON');return JSON.parse(m[0]);}
+
+function genDeptContent(name){
+  var c=ctxStr(),cl=c?'\nCompany context: '+c:'';
+  return callGemini('You are an expert in Talent Acquisition strategy. Generate content for a TA stakeholder map for the "'+name+'" department at a tech scaleup.'+cl+'\n\nRespond with ONLY a raw JSON object. No markdown. Start with { end with }.\n{"badge":"2-4 word role label","what":"2-3 sentences on what '+name+' does and why it matters to TA","value":["value add 1","value add 2","value add 3"],"connects":["TA (connection)","team 2","team 3"],"questions":["question 1","question 2","question 3"],"hiringVolume":2,"bottleneck":"1-2 sentence risk or null"}\nhiringVolume integer 1-5.')
+    .then(function(raw){return extractJSON(raw);});
+}
+
+function genSubteamDesc(subteamName,deptName){
+  var c=ctxStr(),cl=c?'\nCompany context: '+c:'';
+  return callGemini('You are an expert in Talent Acquisition strategy. Write a 2-sentence description of the "'+subteamName+'" sub-team within the "'+deptName+'" department, explaining what they do and why it matters to TA and hiring.'+cl+'\n\nRespond with ONLY a raw JSON object: {"desc":"2 sentence description"}\nNo markdown.')
+    .then(function(raw){return extractJSON(raw).desc;});
+}
+
+function genInsightsAI(t,rg,note){
+  var rl={G:'Green (working well)',A:'Amber (needs attention)',R:'Red (priority gap)'}[rg];
+  var c=ctxStr(),cl=c?'\nCompany context: '+c:'';
+  var headLine=t.head?'\nDept head: '+t.head+(t.headTitle?' ('+t.headTitle+')':''):'';
+  var subLine='';
+  if(t.subteams&&t.subteams.length){subLine='\nSub-teams: '+t.subteams.map(function(st){return st.name+(st.leader?' (lead: '+st.leader+')':'');}).join(', ');}
+  return callGemini('You are an expert in TA strategy and stakeholder management.'+cl+'\n\nTA leader assessed relationship with "'+t.label+'" team.'+headLine+subLine+'\nRAG: '+rl+'\nNotes: "'+(note||'No notes.')+'"\n\nGenerate:\n1. Specific actionable next action (1-2 sentences'+(t.head?', reference '+t.head+' by name':'')+').\n2. 3 ways TA adds value to THIS relationship RIGHT NOW.\n3. 3 discovery questions for THIS team.\n\nRespond ONLY with JSON starting with {:\n{"next_action":"string","value":["s","s","s"],"questions":["s","s","s"]}')
+    .then(function(raw){return extractJSON(raw);});
+}
+
+// ── CONTEXT ───────────────────────────────────────────────────────────────────
+function ctxStr(){
+  var c=companyCtx,p=[];
+  if(c.name)p.push('Company: '+c.name);if(c.industry)p.push('Industry: '+c.industry);
+  if(c.stage)p.push('Stage: '+c.stage);if(c.headcount)p.push('Headcount: '+c.headcount);
+  if(c.taSize)p.push('TA team: '+c.taSize);if(c.hiringVol)p.push('Hiring target: '+c.hiringVol);
+  if(c.regions)p.push('Regions: '+c.regions);if(c.focus)p.push('Focus: '+c.focus);
+  if(c.challenge)p.push('Challenge: '+c.challenge);
+  return p.join(' | ');
+}
+function hasCtx(){return !!(companyCtx.name||companyCtx.industry||companyCtx.stage);}
+
+function renderCtxStatus(){
+  var el=document.getElementById('ctx-status');if(!el)return;
+  var pill=document.getElementById('ctx-pill');
+  var hasKey=!!userApiKey;
+  if(hasCtx()&&hasKey){
+    if(pill)pill.classList.remove('hidden');
+    el.innerHTML='<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#1e9e72" stroke-width="1.2"/><path d="M3.5 6l2 2 3-3" stroke="#1e9e72" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="color:var(--text3)">Using '+(companyCtx.name?companyCtx.name+' context':'your context')+'</span> · <button class="ctx-sbtn edit" onclick="openSettings()">Edit</button>';
+  }else if(!hasKey){
+    if(pill)pill.classList.add('hidden');
+    el.innerHTML='<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#c47d1a" stroke-width="1.2"/><path d="M6 3.5v2.5M6 8v.4" stroke="#c47d1a" stroke-width="1.2" stroke-linecap="round"/></svg><button class="ctx-sbtn warn" onclick="openSettings()">⚠ Add your Gemini API key to enable AI insights →</button>';
+  }else{
+    if(pill)pill.classList.add('hidden');
+    el.innerHTML='<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#c47d1a" stroke-width="1.2"/><path d="M6 3.5v2.5M6 8v.4" stroke="#c47d1a" stroke-width="1.2" stroke-linecap="round"/></svg><button class="ctx-sbtn warn" onclick="openSettings()">⚠ Add company context for tailored insights →</button>';
+  }
+}
+
+function openSettings(){
+  var c=companyCtx;
+  document.getElementById('s-name').value=c.name||'';document.getElementById('s-industry').value=c.industry||'';
+  document.getElementById('s-stage').value=c.stage||'';document.getElementById('s-headcount').value=c.headcount||'';
+  document.getElementById('s-ta-size').value=c.taSize||'';document.getElementById('s-hiring-vol').value=c.hiringVol||'';
+  document.getElementById('s-regions').value=c.regions||'';document.getElementById('s-focus').value=c.focus||'';
+  document.getElementById('s-challenge').value=c.challenge||'';
+  document.getElementById('s-apikey').value=userApiKey||'';
+  document.getElementById('settings-overlay').classList.remove('hidden');
+}
+function closeSettings(){document.getElementById('settings-overlay').classList.add('hidden');}
+function saveSettings(){
+  companyCtx={name:document.getElementById('s-name').value.trim(),industry:document.getElementById('s-industry').value.trim(),stage:document.getElementById('s-stage').value,headcount:document.getElementById('s-headcount').value,taSize:document.getElementById('s-ta-size').value,hiringVol:document.getElementById('s-hiring-vol').value,regions:document.getElementById('s-regions').value.trim(),focus:document.getElementById('s-focus').value.trim(),challenge:document.getElementById('s-challenge').value.trim()};
+  userApiKey=document.getElementById('s-apikey').value.trim();
+  renderCtxStatus();saveToSupabase();closeSettings();
+  if(activeNode)renderDetail(activeNode);
+}
+document.getElementById('settings-overlay').addEventListener('click',function(e){if(e.target===document.getElementById('settings-overlay'))closeSettings();});
+
+// ── MAP ───────────────────────────────────────────────────────────────────────
+function drawLabel(g,raw,cx,cy,isTA,color){
+  var els=g.querySelectorAll('text');for(var i=els.length-1;i>=0;i--)els[i].remove();
+  var maxC=isTA?14:12,words=raw.replace(/\n/g,' ').trim().split(/\s+/),lines=[],cur='';
+  for(var w=0;w<words.length;w++){var test=cur?cur+' '+words[w]:words[w];if(test.length>maxC&&cur){lines.push(cur);cur=words[w];}else cur=test;}
+  if(cur)lines.push(cur);
+  if(lines.length>3){lines=lines.slice(0,3);lines[2]=lines[2].slice(0,maxC-1)+'…';}
+  var lon=0;for(var l=0;l<lines.length;l++)if(lines[l].length>lon)lon=lines[l].length;
+  var fs=isTA?12:11;if(lon>10)fs=isTA?11:10;if(lon>13)fs=isTA?10:9;var lh=fs+5;
+  for(var i=0;i<lines.length;i++){
+    var el=document.createElementNS(ns,'text');
+    el.setAttribute('x',cx);el.setAttribute('y',cy+(i-(lines.length-1)/2)*lh);
+    el.setAttribute('text-anchor','middle');el.setAttribute('dominant-baseline','central');
+    el.setAttribute('fill',color);el.setAttribute('font-size',fs);el.setAttribute('font-weight','600');
+    el.setAttribute('font-family',"'DM Sans',sans-serif");el.setAttribute('pointer-events','none');
+    el.textContent=lines[i];g.appendChild(el);
+  }
+}
+
+function drawMap(){
+  svg.innerHTML='';
+  var defs=document.createElementNS(ns,'defs');
+  defs.innerHTML='<filter id="gta"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
+  svg.appendChild(defs);
+  var ti=tOrder.indexOf('ta'),tp=gp(ti);
+  for(var i=0;i<tOrder.length;i++){
+    var id=tOrder[i];if(id==='ta')continue;
+    var p=gp(i),dx=p.x-tp.x,dy=p.y-tp.y,len=Math.sqrt(dx*dx+dy*dy),ux=dx/len,uy=dy/len;
+    var ln=document.createElementNS(ns,'path');ln.setAttribute('id','e-'+id);
+    ln.setAttribute('d','M'+(tp.x+ux*54)+','+(tp.y+uy*54)+' L'+(p.x-ux*48)+','+(p.y-uy*48));
+    var rg=RAG[id]||'U',cls='edge';if(rg!=='G')cls+=' dashed';if(rg==='R')cls+=' animated';
+    ln.setAttribute('class',cls);ln.setAttribute('stroke',RC[rg]);ln.setAttribute('stroke-width',rg==='R'?'2':'1.5');ln.setAttribute('stroke-opacity',rg==='U'?'0.18':'0.6');
+    svg.appendChild(ln);
+  }
+  for(var i=0;i<tOrder.length;i++){
+    var id=tOrder[i],t=teams[id],p=gp(i),isTA=id==='ta',r=isTA?52:42;
+    var g=document.createElementNS(ns,'g');g.setAttribute('class','node');g.setAttribute('id','nd-'+id);
+    if(isTA){var ring=document.createElementNS(ns,'circle');ring.setAttribute('cx',p.x);ring.setAttribute('cy',p.y);ring.setAttribute('r',68);ring.setAttribute('fill','none');ring.setAttribute('stroke',t.color);ring.setAttribute('stroke-width','1');ring.setAttribute('stroke-dasharray','3 4');ring.setAttribute('opacity','0.18');g.appendChild(ring);}
+    if(!isTA){var rr=document.createElementNS(ns,'circle');rr.setAttribute('cx',p.x);rr.setAttribute('cy',p.y);rr.setAttribute('r',r+6);rr.setAttribute('fill','none');rr.setAttribute('stroke',RAG[id]?RC[RAG[id]]:'#ccc');rr.setAttribute('stroke-width','2.5');rr.setAttribute('opacity',RAG[id]?'0.7':'0.2');rr.setAttribute('id','rr-'+id);g.appendChild(rr);}
+    var bg=document.createElementNS(ns,'circle');bg.setAttribute('cx',p.x);bg.setAttribute('cy',p.y);bg.setAttribute('r',r);bg.setAttribute('fill',t.colorLight);bg.setAttribute('stroke',t.color);bg.setAttribute('stroke-width',isTA?'1.8':'1.2');bg.setAttribute('class','node-bg');if(isTA)bg.setAttribute('filter','url(#gta)');g.appendChild(bg);
+    drawLabel(g,t.label,p.x,p.y,isTA,t.color);
+    makeDraggable(g,id,i);svg.appendChild(g);
+  }
+}
+
+function makeDraggable(g,id,idx){
+  var on=false,sx,sy,ox,oy,mv=false;
+  function start(ex,ey){on=true;mv=false;var pt=svgPt(ex,ey);sx=pt.x;sy=pt.y;var p=gp(idx);ox=p.x;oy=p.y;}
+  function move(ex,ey){if(!on)return;var pt=svgPt(ex,ey);var dx=pt.x-sx,dy=pt.y-sy;if(Math.abs(dx)>3||Math.abs(dy)>3)mv=true;var p=gp(idx);p.x=Math.max(50,Math.min(650,ox+dx));p.y=Math.max(50,Math.min(470,oy+dy));updNode(id,idx);}
+  function end(){if(!on)return;on=false;if(!mv)selNode(id);else saveToSupabase();}
+  g.addEventListener('mousedown',function(e){if(e.button!==0)return;start(e.clientX,e.clientY);e.preventDefault();});
+  window.addEventListener('mousemove',function(e){move(e.clientX,e.clientY);});
+  window.addEventListener('mouseup',end);
+  g.addEventListener('touchstart',function(e){var t=e.touches[0];start(t.clientX,t.clientY);e.preventDefault();},{passive:false});
+  window.addEventListener('touchmove',function(e){if(!on)return;var t=e.touches[0];move(t.clientX,t.clientY);e.preventDefault();},{passive:false});
+  window.addEventListener('touchend',end);
+}
+function svgPt(cx,cy){var p=svg.createSVGPoint();p.x=cx;p.y=cy;return p.matrixTransform(svg.getScreenCTM().inverse());}
+function updNode(id,idx){
+  var p=gp(idx),isTA=id==='ta',r=isTA?52:42;
+  var g=document.getElementById('nd-'+id);if(!g)return;
+  var cs=g.querySelectorAll('circle');for(var i=0;i<cs.length;i++){cs[i].setAttribute('cx',p.x);cs[i].setAttribute('cy',p.y);}
+  drawLabel(g,teams[id].label,p.x,p.y,isTA,teams[id].color);
+  if(isTA){for(var j=0;j<tOrder.length;j++){if(tOrder[j]!=='ta')updEdge(tOrder[j]);}}else updEdge(id);
+}
+function updEdge(id){
+  var ti=tOrder.indexOf('ta'),tp=gp(ti),idx=tOrder.indexOf(id),p=gp(idx);
+  var dx=p.x-tp.x,dy=p.y-tp.y,len=Math.sqrt(dx*dx+dy*dy);if(len===0)return;
+  var ux=dx/len,uy=dy/len;
+  var e=document.getElementById('e-'+id);if(e)e.setAttribute('d','M'+(tp.x+ux*54)+','+(tp.y+uy*54)+' L'+(p.x-ux*48)+','+(p.y-uy*48));
+  updEdgeRing(id);
+}
+function updEdgeRing(id){
+  var rg=RAG[id]||'U';
+  var e=document.getElementById('e-'+id);
+  if(e){e.setAttribute('stroke',RC[rg]);e.setAttribute('stroke-width',rg==='R'?'2':'1.5');e.setAttribute('stroke-opacity',rg==='U'?'0.18':'0.6');var cls='edge';if(rg!=='G')cls+=' dashed';if(rg==='R')cls+=' animated';e.setAttribute('class',cls);}
+  var rr=document.getElementById('rr-'+id);
+  if(rr){rr.setAttribute('stroke',RAG[id]?RC[RAG[id]]:'#ccc');rr.setAttribute('opacity',RAG[id]?'0.7':'0.2');}
+}
+
+// ── PRIORITY ──────────────────────────────────────────────────────────────────
+function updPriority(){
+  var rated=tOrder.filter(function(id){return id!=='ta'&&(RAG[id]==='R'||RAG[id]==='A');});
+  var bar=document.getElementById('priority-bar');
+  if(!rated.length){bar.classList.add('hidden');return;}
+  bar.classList.remove('hidden');
+  rated.sort(function(a,b){
+    var ao=RAG[a]==='R'?(NOTES[a]&&NOTES[a].trim()?1:0):(NOTES[a]&&NOTES[a].trim()?3:2);
+    var bo=RAG[b]==='R'?(NOTES[b]&&NOTES[b].trim()?1:0):(NOTES[b]&&NOTES[b].trim()?3:2);
+    return ao-bo;
+  });
+  document.getElementById('priority-list').innerHTML=rated.map(function(id){
+    var t=teams[id],note=NOTES[id]&&NOTES[id].trim();
+    return'<div class="priority-item" onclick="selNode(\''+id+'\')">'+'<div class="p-rag" style="background:'+RC[RAG[id]]+'"></div>'+'<div class="p-name">'+t.label+'</div>'+'<div class="p-note">'+(note||'<span class="p-nonote">No notes — what\'s broken and who owns it?</span>')+'</div></div>';
+  }).join('');
+}
+
+// ── DETAIL ────────────────────────────────────────────────────────────────────
+function selNode(id){
+  if(activeNode){var pv=document.getElementById('nd-'+activeNode);if(pv)pv.classList.remove('active');}
+  activeNode=id;var cv=document.getElementById('nd-'+id);if(cv)cv.classList.add('active');
+  editingWhat=null;renderDetail(id);
+}
+
+function renderDetail(id){
+  var t=teams[id];
+  document.getElementById('detail-empty').style.display='none';
+  var dc=document.getElementById('detail-content');dc.style.display='flex';dc.style.flexDirection='column';
+  var isTA=id==='ta',cr=RAG[id]||'';
+  var hd='';for(var i=0;i<5;i++)hd+='<div class="hire-dot '+(i<(t.hiringVolume||3)?'filled':'empty')+'"></div>';
+  var vl=['Minimal','Low','Moderate','High','Critical'][(t.hiringVolume||3)-1];
+  var whatH=editingWhat===id
+    ?('<textarea class="what-textarea" id="wt-'+id+'">'+t.what+'</textarea><div class="what-edit-actions"><button class="btn btn-primary btn-sm" onclick="saveWhat(\''+id+'\')">Save</button><button class="btn btn-sm" onclick="cancelWhat(\''+id+'\')">Cancel</button></div>')
+    :('<div class="what-wrap"><p class="detail-what">'+t.what+'</p><button class="btn btn-ghost btn-sm edit-what-btn" onclick="startWhat(\''+id+'\')" title="Edit">✎ Edit</button></div>');
+  var headH='';
+  if(!isTA&&(t.head||t.headTitle)){headH='<div class="head-chip"><div class="head-avatar" style="background:'+t.colorLight+';border:1.5px solid '+t.color+';color:'+t.color+';">'+(t.head?t.head.charAt(0).toUpperCase():'?')+'</div><div><div class="head-name">'+(t.head||'')+'</div>'+(t.headTitle?'<div class="head-title-text">'+t.headTitle+'</div>':'')+'</div></div>';}
+  var subH='';
+  var subs=t.subteams||[];
+  if(!isTA&&subs.length>0){
+    var rows=subs.map(function(st,idx){
+      var initials=st.leader?st.leader.split(' ').map(function(w){return w[0];}).join('').toUpperCase().slice(0,2):'?';
+      return'<div class="subteam-row"><div class="subteam-header" onclick="toggleSubteam(\'stb-'+id+'-'+idx+'\',\'stc-'+id+'-'+idx+'\')"><div class="subteam-header-left"><div class="subteam-avatar" style="background:'+t.colorLight+';color:'+t.color+';border:1px solid '+t.color+';">'+initials+'</div><div><div class="subteam-name">'+esc(st.name)+'</div>'+(st.leader?'<div class="subteam-leader">'+esc(st.leader)+(st.leaderTitle?' · '+esc(st.leaderTitle):'')+'</div>':'')+'</div></div><span class="subteam-chevron" id="stc-'+id+'-'+idx+'">▾</span></div><div class="subteam-body" id="stb-'+id+'-'+idx+'">'+esc(st.desc||'No description yet.')+'</div></div>';
+    }).join('');
+    subH='<div class="subteams-section"><div class="subteams-title">Teams within this department</div>'+rows+'</div>';
+  }
+  var valH=t.value.map(function(v){return'<div class="value-item"><div class="value-dot" style="background:'+t.color+'"></div><span>'+esc(v)+'</span></div>';}).join('');
+  var conH=t.connects.map(function(c){return'<span class="connect-tag">'+esc(c)+'</span>';}).join('');
+  var qH=t.questions.map(function(q){return'<div class="question-item">'+esc(q)+'</div>';}).join('');
+  var nudge='';
+  if(!isTA){
+    if(!userApiKey)nudge='<div class="ai-ctx-nudge">⚠ Add your Gemini API key in <button onclick="openSettings()">Company settings</button> to enable AI insights.</div>';
+    else if(!hasCtx())nudge='<div class="ai-ctx-nudge">No context — insights will be general. <button onclick="openSettings()">Add context →</button></div>';
+  }
+  dc.innerHTML='<div class="detail-hero"><div class="detail-badge" style="background:'+t.badgeBg+';color:'+t.badgeColor+'">'+t.badge+'</div><div class="detail-name">'+t.label+'</div>'+whatH+headH+subH+'</div>'
+    +'<div class="detail-sections">'
+    +(!isTA?'<div class="rag-section"><div class="section-label">Relationship health</div><div class="rag-nudge">Rate this as it actually is — not as you\'d like it to be.</div><div class="rag-options"><button class="rag-btn '+(cr==='G'?'sel-g':'')+'" onclick="setRag(\''+id+'\',\'G\')">🟢 Green</button><button class="rag-btn '+(cr==='A'?'sel-a':'')+'" onclick="setRag(\''+id+'\',\'A\')">🟡 Amber</button><button class="rag-btn '+(cr==='R'?'sel-r':'')+'" onclick="setRag(\''+id+'\',\'R\')">🔴 Red</button></div><div class="rag-note-label">What\'s broken, what\'s the next action, and who owns it?</div><textarea class="rag-note" id="note-'+id+'" placeholder="e.g. Finance approval stuck 3 weeks — no visibility.">'+(NOTES[id]||'')+'</textarea>'+(cr&&userApiKey?nudge+'<div style="margin-top:8px;"><button class="btn btn-primary btn-sm" id="gen-btn-'+id+'" onclick="genInsights(\''+id+'\')">✦ Generate AI insights</button></div>':nudge)+'<div id="aib-'+id+'">'+renderAiBlock(id)+'</div></div>':'')
+    +'<div><div class="section-label">Hiring involvement</div><div class="hire-volume"><div class="hire-dots">'+hd+'</div><span class="hire-label">'+vl+' hiring volume</span></div></div>'
+    +'<div><div class="section-label">How TA adds strategic value</div><div class="value-list">'+valH+'</div></div>'
+    +'<div><div class="section-label">Key connections</div><div class="connects-list">'+conH+'</div></div>'
+    +(t.bottleneck?'<div class="bn-card"><div class="bn-label">Known bottleneck risk</div><div class="bn-text">'+esc(t.bottleneck)+'</div></div>':'')
+    +'<div><div class="section-label">Discovery questions</div><div class="questions-list">'+qH+'</div></div>'
+    +'</div>';
+  var ne=document.getElementById('note-'+id);
+  if(ne)ne.addEventListener('input',function(e){NOTES[id]=e.target.value;updPriority();saveToSupabase();});
+}
+
+function toggleSubteam(bodyId,chevId){
+  var body=document.getElementById(bodyId);var chev=document.getElementById(chevId);if(!body)return;
+  var isOpen=body.classList.contains('open');
+  document.querySelectorAll('.subteam-body').forEach(function(el){el.classList.remove('open');});
+  document.querySelectorAll('.subteam-chevron').forEach(function(el){el.classList.remove('open');});
+  if(!isOpen){body.classList.add('open');if(chev)chev.classList.add('open');}
+}
+
+function startWhat(id){editingWhat=id;renderDetail(id);setTimeout(function(){var e=document.getElementById('wt-'+id);if(e)e.focus();},50);}
+function saveWhat(id){var e=document.getElementById('wt-'+id);if(e)teams[id].what=e.value.trim()||teams[id].what;editingWhat=null;saveToSupabase();renderDetail(id);}
+function cancelWhat(id){editingWhat=null;renderDetail(id);}
+
+function setRag(id,val){
+  RAG[id]=val;updEdgeRing(id);updPriority();saveToSupabase();
+  var bs=document.querySelectorAll('#detail-content .rag-btn');
+  for(var i=0;i<bs.length;i++){var b=bs[i],tx=b.textContent;b.className='rag-btn'+((val==='G'&&tx.indexOf('Green')>-1)?' sel-g':(val==='A'&&tx.indexOf('Amber')>-1)?' sel-a':(val==='R'&&tx.indexOf('Red')>-1)?' sel-r':'');}
+  renderDetail(id);
+}
+
+// ── AI INSIGHTS ───────────────────────────────────────────────────────────────
+function genInsights(id){
+  var t=teams[id],rg=RAG[id],note=NOTES[id]||'';if(!rg||!userApiKey)return;
+  var btn=document.getElementById('gen-btn-'+id);if(btn){btn.disabled=true;btn.textContent='Generating…';}
+  AIS[id]='loading';AID[id]={};refreshAib(id);
+  genInsightsAI(t,rg,note).then(function(data){
+    AID[id]=data;AIS[id]='done';refreshAib(id);saveToSupabase();
+  }).catch(function(err){
+    AIS[id]='error';AID[id]={error:err.message||'Could not generate. Try again.'};refreshAib(id);
+  });
+}
+
+function renderAiBlock(id){
+  var s=AIS[id]||'idle',d=AID[id];
+  if(s==='idle')return'';
+  if(s==='loading')return'<div class="ai-insight-block"><div class="ai-label">✦ AI insights</div><div class="ai-loading">Generating'+(hasCtx()?' using your company context':'')+'…</div></div>';
+  if(s==='error'&&d)return'<div class="ai-insight-block"><div class="ai-label">✦ AI insights</div><div class="ai-error">'+esc(d.error)+'</div><div style="margin-top:8px;"><button class="btn btn-sm" onclick="genInsights(\''+id+'\')">↺ Retry</button></div></div>';
+  if(s==='done'&&d)return'<div class="ai-insight-block"><div class="ai-label">✦ AI insights'+(hasCtx()&&companyCtx.name?' — '+esc(companyCtx.name):'')+'</div>'+aiSec(id,'next_action','Recommended next action',d.next_action,false)+aiSec(id,'value','Tailored value adds',d.value,true)+aiSec(id,'questions','Tailored discovery questions',d.questions,true)+'</div>';
+  return'';
+}
+function toHtml(c,il){return il&&Array.isArray(c)?'<ul>'+c.map(function(x){return'<li>'+esc(x)+'</li>';}).join('')+'</ul>':esc(String(c||''));}
+function aiSec(id,key,title,content,il){
+  var d=AID[id]||{},acc=d[key+'_a'],ov=d[key+'_o'],ed=d[key+'_e'];
+  if(acc)return'<div class="ai-section"><div class="ai-section-title">'+title+'</div><div class="ai-content">'+toHtml(acc,il)+'</div><div class="ai-actions"><span class="ai-accepted">✓ Accepted</span><button class="btn btn-sm" onclick="resetAi(\''+id+'\',\''+key+'\')">Reset</button></div></div>';
+  if(ov)return'<div class="ai-section"><div class="ai-section-title">'+title+'</div><div class="ai-content">'+esc(ov)+'</div><div class="ai-actions"><span class="ai-override">✎ Your version</span><button class="btn btn-sm" onclick="resetAi(\''+id+'\',\''+key+'\')">Reset</button></div></div>';
+  var ea=ed?'<textarea class="ai-edit-area" id="ae-'+id+'-'+key+'" placeholder="Write your own version…">'+(il&&Array.isArray(content)?content.join('\n'):esc(String(content||'')))+'</textarea>':'';
+  return'<div class="ai-section"><div class="ai-section-title">'+title+'</div><div class="ai-content">'+toHtml(content,il)+'</div>'+ea+'<div class="ai-actions"><button class="btn btn-primary btn-sm" onclick="accAi(\''+id+'\',\''+key+'\')">Accept</button><button class="btn btn-sm" onclick="edAi(\''+id+'\',\''+key+'\')">'+(ed?'Save my version':'Edit')+'</button></div></div>';
+}
+function accAi(id,key){if(!AID[id])return;AID[id][key+'_a']=AID[id][key];delete AID[id][key+'_e'];refreshAib(id);saveToSupabase();}
+function edAi(id,key){if(!AID[id])return;var a=document.getElementById('ae-'+id+'-'+key);if(a){AID[id][key+'_o']=a.value;delete AID[id][key+'_e'];refreshAib(id);saveToSupabase();}else{AID[id][key+'_e']=true;refreshAib(id);setTimeout(function(){var el=document.getElementById('ae-'+id+'-'+key);if(el)el.focus();},50);}}
+function resetAi(id,key){if(!AID[id])return;delete AID[id][key+'_a'];delete AID[id][key+'_o'];delete AID[id][key+'_e'];refreshAib(id);saveToSupabase();}
+function refreshAib(id){var el=document.getElementById('aib-'+id);if(el)el.innerHTML=renderAiBlock(id);}
+
+// ── DEPT MODAL ────────────────────────────────────────────────────────────────
+function openDeptModal(){
+  pendingDepts={};genCount=0;expandedDept=null;
+  var nta=tOrder.filter(function(id){return id!=='ta';});
+  var html='';
+  for(var i=0;i<nta.length;i++)html+=buildDeptAccordion(nta[i],teams[nta[i]],false,false);
+  document.getElementById('dept-list').innerHTML=html;
+  document.getElementById('new-dept-input').value='';
+  document.getElementById('gen-status').textContent='';
+  document.getElementById('add-dept-btn').disabled=false;
+  document.getElementById('save-dept-btn').disabled=false;
+  document.getElementById('dept-overlay').classList.remove('hidden');
+}
+
+function buildDeptAccordion(id,t,isOpen,isPending){
+  var subs=t.subteams||[];
+  var subRows=subs.map(function(st,si){
+    return'<div class="subteam-item" id="sti-'+id+'-'+si+'">'
+      +'<div class="subteam-item-top">'
+      +'<input class="subteam-input" id="stn-'+id+'-'+si+'" value="'+esc(st.name||'')+'" placeholder="Sub-team name"/>'
+      +'<input class="subteam-input" id="stl-'+id+'-'+si+'" value="'+esc(st.leader||'')+'" placeholder="Lead name" style="max-width:110px;"/>'
+      +'<input class="subteam-input" id="stt-'+id+'-'+si+'" value="'+esc(st.leaderTitle||'')+'" placeholder="Title" style="max-width:90px;"/>'
+      +'<button class="btn btn-sm btn-danger" onclick="confirmRemoveSubteam(\''+id+'\','+si+')">✕</button>'
+      +'</div>'
+      +'<textarea class="subteam-desc" id="std-'+id+'-'+si+'">'+esc(st.desc||'')+'</textarea>'
+      +'</div>';
+  }).join('');
+  return'<div class="dacc" id="dacc-'+id+'">'
+    +'<div class="dacc-header" onclick="toggleDeptAcc(\''+id+'\')">'
+    +'<div class="dacc-header-left" id="dacc-lbl-'+id+'">'+esc(t.label||'New department')+'</div>'
+    +'<div class="dacc-header-actions" onclick="event.stopPropagation()">'
+    +'<button class="btn btn-sm btn-danger" id="rem-btn-'+id+'" onclick="confirmRemoveDept(\''+id+'\')">Remove</button>'
+    +'<span class="dacc-chevron'+(isOpen?' open':'')+'" id="dacc-chev-'+id+'">▾</span>'
+    +'</div></div>'
+    +'<div class="dacc-body'+(isOpen?' open':'')+'" id="dacc-body-'+id+'">'
+    +'<div><label style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;">Department name</label>'
+    +'<input class="dept-input" id="mn-'+id+'" value="'+esc(t.label||'')+'" maxlength="26" style="margin-top:5px;" oninput="syncLabel(\''+id+'\')"/></div>'
+    +'<div class="dept-field-row"><input class="dept-input sm" id="mh-'+id+'" value="'+esc(t.head||'')+'" placeholder="Dept head name…"/>'
+    +'<input class="dept-input sm" id="mt-'+id+'" value="'+esc(t.headTitle||'')+'" placeholder="Title…"/></div>'
+    +'<div style="margin-top:8px;"><label style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px;">Description</label>'
+    +'<textarea class="dept-desc" id="md-'+id+'"'+(isPending?' disabled':'')+'>'+esc(isPending?'Generating…':t.what||'')+'</textarea></div>'
+    +'<div style="margin-top:12px;"><div style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Sub-teams</div>'
+    +'<div id="subteam-list-'+id+'">'+subRows+'</div>'
+    +'<div class="add-subteam-row"><input class="add-subteam-input" id="ast-'+id+'" placeholder="Add sub-team name…" maxlength="30"/>'
+    +'<button class="btn btn-sm btn-primary" onclick="addSubteam(\''+id+'\')">Add</button></div></div>'
+    +'</div></div>';
+}
+
+function syncLabel(id){var mn=document.getElementById('mn-'+id);var lbl=document.getElementById('dacc-lbl-'+id);if(mn&&lbl)lbl.textContent=mn.value||'Department';}
+function toggleDeptAcc(id){
+  var body=document.getElementById('dacc-body-'+id),chev=document.getElementById('dacc-chev-'+id);if(!body)return;
+  var isOpen=body.classList.contains('open');
+  document.querySelectorAll('.dacc-body').forEach(function(el){el.classList.remove('open');});
+  document.querySelectorAll('.dacc-chevron').forEach(function(el){el.classList.remove('open');});
+  if(!isOpen){body.classList.add('open');if(chev)chev.classList.add('open');expandedDept=id;}else expandedDept=null;
+}
+
+function confirmRemoveDept(id){
+  var btn=document.getElementById('rem-btn-'+id);if(!btn)return;
+  btn.outerHTML='<span class="confirm-inline" id="rem-confirm-'+id+'">Remove? <button class="btn btn-sm btn-danger" onclick="doRemoveDept(\''+id+'\')">Yes</button> <button class="btn btn-sm" onclick="cancelRemoveDept(\''+id+'\')">Cancel</button></span>';
+}
+function cancelRemoveDept(id){var s=document.getElementById('rem-confirm-'+id);if(s)s.outerHTML='<button class="btn btn-sm btn-danger" id="rem-btn-'+id+'" onclick="confirmRemoveDept(\''+id+'\')">Remove</button>';}
+function doRemoveDept(id){var r=document.getElementById('dacc-'+id);if(r)r.remove();delete pendingDepts[id];if(expandedDept===id)expandedDept=null;}
+
+function confirmRemoveSubteam(deptId,si){
+  var item=document.getElementById('sti-'+deptId+'-'+si);if(!item)return;
+  var rb=item.querySelector('.btn-danger');if(!rb)return;
+  rb.outerHTML='<span class="confirm-inline" id="stc-'+deptId+'-'+si+'">Remove? <button class="btn btn-sm btn-danger" onclick="doRemoveSubteam(\''+deptId+'\','+si+')">Yes</button> <button class="btn btn-sm" onclick="cancelRemoveST(\''+deptId+'\','+si+')">Cancel</button></span>';
+}
+function cancelRemoveST(deptId,si){var s=document.getElementById('stc-'+deptId+'-'+si);if(s)s.outerHTML='<button class="btn btn-sm btn-danger" onclick="confirmRemoveSubteam(\''+deptId+'\','+si+')">✕</button>';}
+function doRemoveSubteam(deptId,si){var item=document.getElementById('sti-'+deptId+'-'+si);if(item)item.remove();}
+
+function addSubteam(deptId){
+  var inp=document.getElementById('ast-'+deptId);
+  var name=inp?inp.value.trim():'';if(!name)return;
+  inp.value='';
+  var deptLabel=(document.getElementById('mn-'+deptId)||{}).value||(teams[deptId]&&teams[deptId].label)||deptId;
+  var list=document.getElementById('subteam-list-'+deptId);if(!list)return;
+  var si=list.querySelectorAll('.subteam-item').length;
+  var row=document.createElement('div');
+  row.className='subteam-item';row.id='sti-'+deptId+'-'+si;
+  row.innerHTML='<div class="subteam-item-top">'
+    +'<input class="subteam-input" id="stn-'+deptId+'-'+si+'" value="'+esc(name)+'" placeholder="Sub-team name"/>'
+    +'<input class="subteam-input" id="stl-'+deptId+'-'+si+'" value="" placeholder="Lead name" style="max-width:110px;"/>'
+    +'<input class="subteam-input" id="stt-'+deptId+'-'+si+'" value="" placeholder="Title" style="max-width:90px;"/>'
+    +'<button class="btn btn-sm btn-danger" onclick="confirmRemoveSubteam(\''+deptId+'\','+si+')">✕</button>'
+    +'</div>'
+    +'<textarea class="subteam-desc" id="std-'+deptId+'-'+si+'" placeholder="Generating description…" disabled></textarea>'
+    +'<div class="subteam-gen-note" id="stgn-'+deptId+'-'+si+'">Generating…</div>';
+  list.appendChild(row);
+  if(userApiKey){
+    genSubteamDesc(name,deptLabel).then(function(desc){
+      var ta=document.getElementById('std-'+deptId+'-'+si);if(ta){ta.value=desc;ta.disabled=false;}
+      var gn=document.getElementById('stgn-'+deptId+'-'+si);if(gn)gn.remove();
+    }).catch(function(){
+      var ta=document.getElementById('std-'+deptId+'-'+si);if(ta){ta.value='';ta.disabled=false;ta.placeholder='Generation failed — type a description manually.';}
+      var gn=document.getElementById('stgn-'+deptId+'-'+si);if(gn)gn.remove();
+    });
+  }else{
+    var ta=document.getElementById('std-'+deptId+'-'+si);if(ta){ta.disabled=false;ta.placeholder='Add your Gemini API key in settings to auto-generate descriptions.';}
+    var gn=document.getElementById('stgn-'+deptId+'-'+si);if(gn)gn.remove();
+  }
+}
+
+function addDept(){
+  var inp=document.getElementById('new-dept-input');
+  var name=inp.value.trim();if(!name)return;
+  var id='d'+Date.now();
+  var addBtn=document.getElementById('add-dept-btn');
+  var saveBtn=document.getElementById('save-dept-btn');
+  var statusEl=document.getElementById('gen-status');
+  addBtn.disabled=true;saveBtn.disabled=true;
+  statusEl.textContent='Generating content for "'+name+'"…';
+  genCount++;
+  var col=DC[Object.keys(teams).length%DC.length];
+  pendingDepts[id]={label:name,gen:null,col:col};
+  inp.value='';
+  var list=document.getElementById('dept-list');
+  var wrapper=document.createElement('div');
+  var tempT={label:name,what:'',head:'',headTitle:'',subteams:[],value:[],connects:[],questions:[],hiringVolume:3,badge:'Department',badgeBg:col+'28',badgeColor:col,color:col,colorLight:col+'28',bottleneck:null};
+  wrapper.innerHTML=buildDeptAccordion(id,tempT,true,true);
+  list.appendChild(wrapper.firstChild);
+  expandedDept=id;
+
+  function done(){genCount--;if(genCount===0){statusEl.textContent='';addBtn.disabled=false;saveBtn.disabled=false;}}
+
+  if(userApiKey){
+    genDeptContent(name).then(function(gen){
+      pendingDepts[id].gen=gen;
+      var de=document.getElementById('md-'+id);if(de){de.value=gen.what;de.disabled=false;}
+      done();
+    }).catch(function(){
+      var de=document.getElementById('md-'+id);if(de){de.value='';de.disabled=false;de.placeholder='Generation failed — type a description or retry.';}
+      var rb=document.createElement('button');rb.className='btn btn-sm';rb.style.marginTop='6px';rb.textContent='↺ Retry';
+      rb.onclick=function(){
+        rb.disabled=true;rb.textContent='Generating…';
+        var de2=document.getElementById('md-'+id);if(de2)de2.disabled=true;
+        genDeptContent(name).then(function(gen){pendingDepts[id].gen=gen;if(de2){de2.value=gen.what;de2.disabled=false;}rb.remove();})
+          .catch(function(){rb.disabled=false;rb.textContent='↺ Retry';if(de2)de2.disabled=false;});
+      };
+      var body=document.getElementById('dacc-body-'+id);if(body)body.appendChild(rb);
+      done();
+    });
+  }else{
+    var de=document.getElementById('md-'+id);if(de){de.disabled=false;de.placeholder='Add your Gemini API key in settings to auto-generate content.';}
+    statusEl.textContent='';addBtn.disabled=false;saveBtn.disabled=false;genCount--;
+  }
+}
+
+function readSubteams(id){
+  var list=document.getElementById('subteam-list-'+id);if(!list)return[];
+  var items=list.querySelectorAll('.subteam-item'),result=[];
+  items.forEach(function(item){
+    var parts=item.id.split('-'),si=parts[parts.length-1];
+    var nm=(document.getElementById('stn-'+id+'-'+si)||{}).value||'';
+    var ldr=(document.getElementById('stl-'+id+'-'+si)||{}).value||'';
+    var lt=(document.getElementById('stt-'+id+'-'+si)||{}).value||'';
+    var desc=(document.getElementById('std-'+id+'-'+si)||{}).value||'';
+    if(nm.trim())result.push({name:nm.trim(),leader:ldr.trim(),leaderTitle:lt.trim(),desc:desc.trim()});
+  });
+  return result;
+}
+
+function saveDeptModal(){
+  if(genCount>0)return;
+  tOrder.filter(function(id){return id!=='ta';}).forEach(function(id){
+    var row=document.getElementById('dacc-'+id);
+    if(!row){delete teams[id];delete RAG[id];delete NOTES[id];delete AID[id];delete AIS[id];}
+    else{
+      var mn=document.getElementById('mn-'+id),md=document.getElementById('md-'+id),mh=document.getElementById('mh-'+id),mt=document.getElementById('mt-'+id);
+      if(mn&&mn.value.trim())teams[id].label=mn.value.trim();
+      if(md&&md.value.trim())teams[id].what=md.value.trim();
+      teams[id].head=mh?mh.value.trim():'';teams[id].headTitle=mt?mt.value.trim():'';
+      teams[id].subteams=readSubteams(id);
+    }
+  });
+  Object.keys(pendingDepts).forEach(function(id){
+    if(!document.getElementById('dacc-'+id))return;
+    var p=pendingDepts[id];
+    var mn=document.getElementById('mn-'+id),md=document.getElementById('md-'+id),mh=document.getElementById('mh-'+id),mt=document.getElementById('mt-'+id);
+    var lbl=mn&&mn.value.trim()?mn.value.trim():p.label;
+    var desc=md&&md.value.trim()?md.value.trim():'';
+    var head=mh?mh.value.trim():'',headTitle=mt?mt.value.trim():'';
+    var subs=readSubteams(id),cl=p.col+'28';
+    if(p.gen){teams[id]={label:lbl,color:p.col,colorLight:cl,badge:p.gen.badge||'Department',badgeBg:cl,badgeColor:p.col,what:desc||p.gen.what,value:p.gen.value||[],connects:p.gen.connects||['TA (hiring pipeline)'],bottleneck:p.gen.bottleneck||null,questions:p.gen.questions||[],hiringVolume:p.gen.hiringVolume||3,head:head,headTitle:headTitle,subteams:subs};}
+    else{teams[id]={label:lbl,color:p.col,colorLight:cl,badge:'Department',badgeBg:cl,badgeColor:p.col,what:desc||lbl+' is a key stakeholder for TA.',value:["Understand hiring needs","Build a proactive pipeline","Align on what great talent looks like"],connects:['TA (hiring pipeline)'],bottleneck:null,questions:["What are your most critical hiring needs?","How would you describe the current TA relationship?","Where could TA add more value?"],hiringVolume:3,head:head,headTitle:headTitle,subteams:subs};}
+  });
+  var kept=tOrder.filter(function(id){return id==='ta'||!!document.getElementById('dacc-'+id);});
+  var newIds=Object.keys(pendingDepts).filter(function(id){return document.getElementById('dacc-'+id)&&kept.indexOf(id)<0;});
+  tOrder=kept.concat(newIds).filter(function(id){return!!teams[id];});
+  closeDeptModal();drawMap();updPriority();saveToSupabase();
+  if(activeNode&&!teams[activeNode]){activeNode=null;document.getElementById('detail-empty').style.display='flex';document.getElementById('detail-content').style.display='none';}
+  else if(activeNode)renderDetail(activeNode);
+}
+
+function closeDeptModal(){document.getElementById('dept-overlay').classList.add('hidden');pendingDepts={};}
+document.getElementById('dept-overlay').addEventListener('click',function(e){if(e.target===document.getElementById('dept-overlay')&&genCount===0)closeDeptModal();});
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function initApp(){
+  teams=JSON.parse(JSON.stringify(DT));
+  tOrder=Object.keys(teams);
+  loadFromSupabase().then(function(){
+    Object.keys(teams).forEach(function(id){if(!teams[id].subteams)teams[id].subteams=[];});
+    document.getElementById('auth-screen').style.display='none';
+    document.getElementById('app').classList.add('visible');
+    var av=document.getElementById('user-avatar');
+    if(av&&currentUser){
+      var email=currentUser.email||'';
+      av.textContent=email.charAt(0).toUpperCase();
+      av.title=email;
+    }
+    drawMap();selNode('ta');renderCtxStatus();updPriority();
+  });
+}
+
+// Handle OAuth callback or existing session
+handleAuthCallback();
+getUser().then(function(user){
+  if(user){
+    currentUser=user;
+    initApp();
+  }else{
+    document.getElementById('auth-screen').style.display='flex';
+  }
+});
+</script>
+</body>
+</html>
