@@ -318,7 +318,7 @@ svg#map{width:100%;height:100%;}
     <div class="api-key-section">
       <div class="api-key-label">Gemini API key</div>
       <input class="api-key-input" id="s-apikey" type="password" placeholder="Paste your Gemini API key here…"/>
-      <div class="api-key-hint">Get a free API key at <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>. Your key is saved to your account and only accessible by you.</div>
+      <div class="api-key-hint">Get a free API key at <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>. Your key is stored only in this browser and never sent to our servers.</div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="closeSettings()">Cancel</button><button class="btn btn-primary" onclick="saveSettings()">Save context</button></div>
   </div>
@@ -472,7 +472,7 @@ function loadFromSupabase(){
       if(d.AID)AID=d.AID;
       if(d.AIS){Object.keys(d.AIS).forEach(function(id){AIS[id]=d.AIS[id]==='loading'?'idle':d.AIS[id];});}
       if(d.ctx)companyCtx=d.ctx;
-      if(d.apiKey)userApiKey=d.apiKey;
+      userApiKey=localStorage.getItem('ta-sor-apikey')||'';
       if(d.custom){Object.keys(d.custom).forEach(function(id){teams[id]=d.custom[id];if(!teams[id].subteams)teams[id].subteams=[];});}
       if(d.tOrder){
         tOrder=d.tOrder.filter(function(id){return!!teams[id];});
@@ -501,7 +501,7 @@ function saveToSupabase(){
     // Track which default depts have been removed so they don't reappear on reload
     var removedDefaults=Object.keys(DT).filter(function(id){return tOrder.indexOf(id)<0;});
     // Save full position arrays — both default and extra positions for custom depts
-    var payload={RAG:RAG,NOTES:NOTES,AID:AID,AIS:AIS,ctx:companyCtx,apiKey:userApiKey,custom:custom,tOrder:tOrder,removedDefaults:removedDefaults,POS:POS.slice(),EPOS:EPOS.slice()};
+    var payload={RAG:RAG,NOTES:NOTES,AID:AID,AIS:AIS,ctx:companyCtx,custom:custom,tOrder:tOrder,removedDefaults:removedDefaults,POS:POS.slice(),EPOS:EPOS.slice()};
     // Attempt token refresh if needed before saving
     var token2=getToken();
     fetch(SUPABASE_URL+'/rest/v1/user_data',{
@@ -652,6 +652,7 @@ function closeSettings(){document.getElementById('settings-overlay').classList.a
 function saveSettings(){
   companyCtx={name:document.getElementById('s-name').value.trim(),industry:document.getElementById('s-industry').value.trim(),stage:document.getElementById('s-stage').value,headcount:document.getElementById('s-headcount').value,taSize:document.getElementById('s-ta-size').value,hiringVol:document.getElementById('s-hiring-vol').value,regions:document.getElementById('s-regions').value.trim(),focus:document.getElementById('s-focus').value.trim(),challenge:document.getElementById('s-challenge').value.trim()};
   userApiKey=document.getElementById('s-apikey').value.trim();
+  localStorage.setItem('ta-sor-apikey',userApiKey);
   renderCtxStatus();saveToSupabase();closeSettings();
   if(activeNode)renderDetail(activeNode);
 }
