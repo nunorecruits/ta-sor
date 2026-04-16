@@ -554,6 +554,7 @@ function callGeminiModel(prompt,model){
   }).then(function(d){
     var parts=d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts;
     var text=parts&&parts[parts.length-1]&&parts[parts.length-1].text;
+    console.log('GEMINI RAW RESPONSE:', JSON.stringify(d));
     if(!text)throw new Error('Empty response — please try again.');
     return text.trim();
   });
