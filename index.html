@@ -318,7 +318,7 @@ svg#map{width:100%;height:100%;}
     <div class="api-key-section">
       <div class="api-key-label">Gemini API key</div>
       <input class="api-key-input" id="s-apikey" type="password" placeholder="Paste your Gemini API key here…"/>
-      <div class="api-key-hint">Get a free API key at <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>. Your key is stored only in this browser and never sent to our servers.</div>
+      <div class="api-key-hint">Get a free API key at <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>. Your key is saved to your account and only accessible by you.</div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="closeSettings()">Cancel</button><button class="btn btn-primary" onclick="saveSettings()">Save context</button></div>
   </div>
@@ -400,8 +400,6 @@ function signOut(){
   fetch(SUPABASE_URL+'/auth/v1/logout',{method:'POST',headers:supabaseHeaders(token)})
     .finally(function(){
       clearToken();
-      // Clear API key so it doesn't persist for a different user on the same browser
-      localStorage.removeItem('ta-sor-apikey');
       localStorage.removeItem('ta-sor-refresh');
       currentUser=null;
       userApiKey='';
@@ -474,8 +472,7 @@ function loadFromSupabase(){
       if(d.AID)AID=d.AID;
       if(d.AIS){Object.keys(d.AIS).forEach(function(id){AIS[id]=d.AIS[id]==='loading'?'idle':d.AIS[id];});}
       if(d.ctx)companyCtx=d.ctx;
-      // API key is stored in localStorage only — never in Supabase
-      userApiKey=localStorage.getItem('ta-sor-apikey')||'';
+      if(d.apiKey)userApiKey=d.apiKey;
       if(d.custom){Object.keys(d.custom).forEach(function(id){teams[id]=d.custom[id];if(!teams[id].subteams)teams[id].subteams=[];});}
       if(d.tOrder){
         tOrder=d.tOrder.filter(function(id){return!!teams[id];});
@@ -504,7 +501,7 @@ function saveToSupabase(){
     // Track which default depts have been removed so they don't reappear on reload
     var removedDefaults=Object.keys(DT).filter(function(id){return tOrder.indexOf(id)<0;});
     // Save full position arrays — both default and extra positions for custom depts
-    var payload={RAG:RAG,NOTES:NOTES,AID:AID,AIS:AIS,ctx:companyCtx,custom:custom,tOrder:tOrder,removedDefaults:removedDefaults,POS:POS.slice(),EPOS:EPOS.slice()};
+    var payload={RAG:RAG,NOTES:NOTES,AID:AID,AIS:AIS,ctx:companyCtx,apiKey:userApiKey,custom:custom,tOrder:tOrder,removedDefaults:removedDefaults,POS:POS.slice(),EPOS:EPOS.slice()};
     // Attempt token refresh if needed before saving
     var token2=getToken();
     fetch(SUPABASE_URL+'/rest/v1/user_data',{
@@ -540,19 +537,42 @@ function showSaveFailed(){
 }
 
 // ── GEMINI AI ─────────────────────────────────────────────────────────────────
-function callGemini(prompt){
-  if(!userApiKey)return Promise.reject(new Error('No API key set. Add your Gemini API key in Company settings.'));
-  return fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+userApiKey,{
+var GEMINI_MODELS=['gemini-2.5-flash','gemini-2.0-flash'];
+
+function callGeminiModel(prompt,model){
+  return fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+userApiKey,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:1000}})
   }).then(function(r){
-    if(!r.ok)throw new Error('Gemini API error: '+r.status);
+    if(r.status===503||r.status===429)return r.json().then(function(d){var e=new Error(r.status===503?'Google\'s AI servers are busy right now — please try again in a moment.':'Too many requests — please wait a moment and try again.');e.status=r.status;e.retryable=true;throw e;});
+    if(r.status===400)return r.json().then(function(d){var msg=(d.error&&d.error.message)||'Invalid request.';throw new Error('API error: '+msg);});
+    if(r.status===401||r.status===403)throw new Error('Invalid API key — please check your Gemini API key in Company settings.');
+    if(r.status===404)throw new Error('Model not available — trying backup model…');
+    if(!r.ok)throw new Error('Unexpected error ('+r.status+') — please try again.');
     return r.json();
   }).then(function(d){
     var text=d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts&&d.candidates[0].content.parts[0]&&d.candidates[0].content.parts[0].text;
-    if(!text)throw new Error('Empty response from Gemini');
+    if(!text)throw new Error('Empty response — please try again.');
     return text.trim();
+  });
+}
+
+function callGemini(prompt,modelIndex,retries){
+  if(!userApiKey)return Promise.reject(new Error('No API key — add your Gemini API key in Company settings.'));
+  modelIndex=modelIndex||0;retries=retries||0;
+  var model=GEMINI_MODELS[modelIndex]||GEMINI_MODELS[0];
+  return callGeminiModel(prompt,model).catch(function(err){
+    // Retryable server errors — wait and retry up to 3 times
+    if(err.retryable&&retries<3){
+      var delay=1000*Math.pow(2,retries);
+      return new Promise(function(res){setTimeout(res,delay);}).then(function(){return callGemini(prompt,modelIndex,retries+1);});
+    }
+    // 404 means this model isn't available — try the next one
+    if(err.message.indexOf('backup model')>-1&&modelIndex<GEMINI_MODELS.length-1){
+      return callGemini(prompt,modelIndex+1,0);
+    }
+    throw err;
   });
 }
 
@@ -622,8 +642,6 @@ function closeSettings(){document.getElementById('settings-overlay').classList.a
 function saveSettings(){
   companyCtx={name:document.getElementById('s-name').value.trim(),industry:document.getElementById('s-industry').value.trim(),stage:document.getElementById('s-stage').value,headcount:document.getElementById('s-headcount').value,taSize:document.getElementById('s-ta-size').value,hiringVol:document.getElementById('s-hiring-vol').value,regions:document.getElementById('s-regions').value.trim(),focus:document.getElementById('s-focus').value.trim(),challenge:document.getElementById('s-challenge').value.trim()};
   userApiKey=document.getElementById('s-apikey').value.trim();
-  // Store API key in localStorage only — never sent to Supabase
-  localStorage.setItem('ta-sor-apikey',userApiKey);
   renderCtxStatus();saveToSupabase();closeSettings();
   if(activeNode)renderDetail(activeNode);
 }
@@ -807,7 +825,7 @@ function genInsights(id){
   genInsightsAI(t,rg,note).then(function(data){
     AID[id]=data;AIS[id]='done';aiGenerating[id]=false;refreshAib(id);saveToSupabase();
   }).catch(function(err){
-    AIS[id]='error';AID[id]={error:err.message||'Could not generate. Try again.'};aiGenerating[id]=false;refreshAib(id);
+    AIS[id]='error';AID[id]={error:err.message||'Something went wrong — please try again.'};aiGenerating[id]=false;refreshAib(id);
   });
 }
 
