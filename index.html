@@ -582,9 +582,9 @@ function extractJSON(raw){
   // Find the first { and last } to extract the JSON object
   var start=cleaned.indexOf('{');
   var end=cleaned.lastIndexOf('}');
-  if(start===-1||end===-1||end<=start)throw new Error('No JSON');
+  if(start===-1||end===-1||end<=start)throw new Error('No braces found. Raw response: '+cleaned.slice(0,300));
   try{return JSON.parse(cleaned.slice(start,end+1));}
-  catch(e){throw new Error('No JSON');}
+  catch(e){throw new Error('Parse failed. Raw response: '+cleaned.slice(0,300));}
 }
 
 function genDeptContent(name){
