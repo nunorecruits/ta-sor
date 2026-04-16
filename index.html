@@ -126,8 +126,8 @@ svg#map{width:100%;height:100%;}
 .rag-note{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 11px;color:var(--text);font-family:var(--sans);font-size:12px;resize:none;line-height:1.5;min-height:68px;}
 .rag-note:focus{outline:none;border-color:var(--ta);}
 .rag-note::placeholder{color:var(--text3);}
-.ai-ctx-nudge{font-size:11px;color:var(--warn);margin:8px 0 4px;display:flex;align-items:center;gap:5px;}
-.ai-ctx-nudge button{background:none;border:none;padding:0;font-family:var(--sans);font-size:11px;color:var(--ta);cursor:pointer;text-decoration:underline;}
+.ai-ctx-nudge{font-size:11px;color:var(--warn);margin:8px 0 4px;line-height:1.5;}
+.ai-ctx-nudge button{background:none;border:none;padding:0;font-family:var(--sans);font-size:11px;color:var(--ta);cursor:pointer;text-decoration:underline;display:inline;}
 .ai-insight-block{margin-top:11px;background:rgba(90,79,207,0.05);border:1px solid rgba(90,79,207,0.18);border-radius:var(--radius-sm);padding:12px 14px;}
 .ai-label{font-family:var(--mono);font-size:9px;color:var(--ta);letter-spacing:.1em;text-transform:uppercase;margin-bottom:9px;}
 .ai-loading{font-size:12px;color:var(--text3);font-style:italic;}
@@ -542,7 +542,7 @@ function showSaveFailed(){
 // ── GEMINI AI ─────────────────────────────────────────────────────────────────
 function callGemini(prompt){
   if(!userApiKey)return Promise.reject(new Error('No API key set. Add your Gemini API key in Company settings.'));
-  return fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key='+userApiKey,{
+  return fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+userApiKey,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:1000}})
@@ -759,8 +759,8 @@ function renderDetail(id){
   var qH=t.questions.map(function(q){return'<div class="question-item">'+esc(q)+'</div>';}).join('');
   var nudge='';
   if(!isTA){
-    if(!userApiKey)nudge='<div class="ai-ctx-nudge">⚠ Add your Gemini API key in <button onclick="openSettings()">Company settings</button> to enable AI insights.</div>';
-    else if(!hasCtx())nudge='<div class="ai-ctx-nudge">No context — insights will be general. <button onclick="openSettings()">Add context →</button></div>';
+    if(!userApiKey)nudge='<div class="ai-ctx-nudge">⚠ Add a Gemini API key in <button onclick="openSettings()">Company settings</button> to enable AI insights.</div>';
+    else if(!hasCtx())nudge='<div class="ai-ctx-nudge">No context set — insights will be general. <button onclick="openSettings()">Add context →</button></div>';
   }
   dc.innerHTML='<div class="detail-hero"><div class="detail-badge" style="background:'+t.badgeBg+';color:'+t.badgeColor+'">'+t.badge+'</div><div class="detail-name">'+t.label+'</div>'+whatH+headH+subH+'</div>'
     +'<div class="detail-sections">'
