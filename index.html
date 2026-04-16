@@ -576,7 +576,16 @@ function callGemini(prompt,modelIndex,retries){
   });
 }
 
-function extractJSON(raw){var m=raw.match(/\{[\s\S]*\}/);if(!m)throw new Error('No JSON');return JSON.parse(m[0]);}
+function extractJSON(raw){
+  // Strip markdown code fences if present
+  var cleaned=raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+  // Find the first { and last } to extract the JSON object
+  var start=cleaned.indexOf('{');
+  var end=cleaned.lastIndexOf('}');
+  if(start===-1||end===-1||end<=start)throw new Error('No JSON');
+  try{return JSON.parse(cleaned.slice(start,end+1));}
+  catch(e){throw new Error('No JSON');}
+}
 
 function genDeptContent(name){
   var c=ctxStr(),cl=c?'\nCompany context: '+c:'';
